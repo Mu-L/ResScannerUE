@@ -2,6 +2,8 @@
 
 
 #include "FlibOperationEditorHelper.h"
+
+#include "Engine/TextureCube.h"
 #if WITH_EDITOR
 	#include "BlueprintEditorSettings.h"
 	#include "Kismet2/CompilerResultsLog.h"
@@ -56,4 +58,15 @@ bool UFlibOperationEditorHelper::BlueprintHasError(UObject* Blueprint,bool bWarn
 	
 	bool bRetHasError = bWarningAsError ? (bHasError || OutNumWarning > 0) : bHasError;
 	return bRetHasError;
+}
+
+FVector2D UFlibOperationEditorHelper::GetTextureCubeSize(UTextureCube* TextureCube)
+{
+	FVector2D result;
+	if(TextureCube)
+	{
+		result.X = TextureCube->GetSizeX();
+		result.Y = TextureCube->GetSizeY();
+	}
+	return result;
 }

@@ -9,6 +9,18 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "FlibSourceControlHelper.generated.h"
 
+UENUM(Blueprintable)
+enum class EGitFileStatus:uint8
+{
+	NoEdit,
+	Modify,
+	Added,
+	Deleted,
+	Renamed,
+	Copoed,
+	Unmerged,
+	Untracked
+};
 /**
  * 
  */
@@ -42,9 +54,19 @@ public:
 		static bool GetBranchName(const FString& InPathToGitBinary, const FString& InRepositoryRoot, FString& OutBranchName);
 	UFUNCTION(BlueprintCallable, Category = "GitSourceControlEx|Flib")
 		static bool GetRemoteUrl(const FString& InPathToGitBinary, const FString& InRepositoryRoot, FString& OutRemoteUrl);
-
+	UFUNCTION(BlueprintCallable, Category = "GitSourceControlEx|Flib")
+		static bool GetConfigUserName(const FString& InPathToGitBinary, FString& OutUserName);
+	UFUNCTION(BlueprintCallable, Category = "GitSourceControlEx|Flib")
+		static bool GetConfigUserEmail(const FString& InPathToGitBinary, FString& OutUserEmail);
+	
 	UFUNCTION(BlueprintCallable, Category = "GitSourceControlEx|Flib")
 		static bool FindRootDirectory(const FString& InPath, FString& OutRepositoryRoot);
+
+	UFUNCTION(BlueprintCallable, Category = "GitSourceControlEx|Flib")
+	static EGitFileStatus ParseFileStatus(const FString& FileStatusStr);
+	
+	UFUNCTION(BlueprintCallable, Category = "GitSourceControlEx|Flib")
+	static EGitFileStatus GetFileStatus(const FString& InGitBinaey, const FString& InRepoRoot,const FString InFile);
 	/**
 	 * Run a Git "log" command and parse it.
 	 *

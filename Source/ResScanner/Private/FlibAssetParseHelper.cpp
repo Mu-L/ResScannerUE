@@ -151,12 +151,13 @@ TArray<FAssetData> UFlibAssetParseHelper::GetAssetsWithCachedByTypes(const TArra
 			if(bRecursiveClasses)
 			{
 				UClass* FoundClass = FindObject<UClass>(ANY_PACKAGE, *Type, true);
-				if(FoundClass)
+				UClass* CurrentAssetClass = FindObject<UClass>(ANY_PACKAGE, *CachedAsset.AssetClass.ToString(), true);
+				if(FoundClass && CurrentAssetClass)
 				{
-					bCheckChild = CachedAsset.GetClass()->IsChildOf(FoundClass);
+					bCheckChild = CurrentAssetClass->IsChildOf(FoundClass);
 				}
 			}
-			if(CachedAsset.AssetClass.ToString().Equals(Type) && bCheckChild)
+			if(CachedAsset.AssetClass.ToString().Equals(Type) || bCheckChild)
 			{
 				if(bUseFilter)
 				{
@@ -361,65 +362,139 @@ TArray<FSoftObjectPath> UFlibAssetParseHelper::GetAssetsByGitCommitHash(const FS
 
 void UFlibAssetParseHelper::CheckMatchedAssetsCommiter(FMatchedResult& MatchedResult, const FString& RepoDir)
 {
-	auto GetPackagePath = [](const FString& InPackageName)
-	{
-		FString AssetName;
-		{
-			int32 FoundIndex;
-			InPackageName.FindLastChar('/', FoundIndex);
-			if (FoundIndex != INDEX_NONE)
-			{
-				AssetName = UKismetStringLibrary::GetSubstring(InPackageName, FoundIndex + 1, InPackageName.Len() - FoundIndex);
-			}
-		}
-		AssetName = InPackageName + TEXT(".") + AssetName;
-		return AssetName;
-	};
 	for(auto& MatchedInfo:MatchedResult.MatchedAssets)
 	{
 		for(const auto& AssetPackageName:MatchedInfo.AssetPackageNames)
 		{
-			FString RealFile;
-			FSoftObjectPath AssetObjectPaht = GetPackagePath(AssetPackageName);
+			FFileCommiter FileCommiter;
 
-			FString PackageExtension = FPackageName::GetAssetPackageExtension();
+			// convert to repo path
+			FString FileInRepo;
+			FString PackageExtension = GetPackageExtensionByLongPackageName(AssetPackageName);
+			FPackageName::TryConvertLongPackageNameToFilename(AssetPackageName,FileInRepo,*PackageExtension);
+			FileInRepo = FPaths::ConvertRelativePathToFull(FileInRepo);
+			
+			EGitFileStatus FileStatus = UFlibSourceControlHelper::GetFileStatus(TEXT("git"),RepoDir,FileInRepo);
+
+			bool bGetStatus = false;
+			if(FileStatus == EGitFileStatus::NoEdit)
 			{
-				UPackage* Package = FindPackage(NULL, *AssetObjectPaht.GetAssetPathString());
-				if (Package)
-				{
-					Package->FullyLoad();
-				}
-				else
-				{
-					Package = LoadPackage(NULL, *AssetObjectPaht.GetAssetPathString(), LOAD_None);
-				}
-				if(Package)
-				{
-					PackageExtension = Package->ContainsMap() ? FPackageName::GetMapPackageExtension() : FPackageName::GetAssetPackageExtension();
-				}
+				bGetStatus = UFlibAssetParseHelper::GetGitCommiterByLongPackageName(RepoDir,AssetPackageName,FileCommiter);
+			}
+			else
+			{
+				bGetStatus = UFlibAssetParseHelper::GetLocalEditorByLongPackageName(RepoDir,AssetPackageName,FileCommiter);
 			}
 			
-			FPackageName::TryConvertLongPackageNameToFilename(AssetPackageName,RealFile,*PackageExtension);
-			
-			RealFile = FPaths::ConvertRelativePathToFull(RealFile);
-			if(!RealFile.IsEmpty())
+			if(bGetStatus)
 			{
-				RealFile.RemoveFromStart(RepoDir);
-				FGitSourceControlRevisionData Data;
-				FFileCommiter FileCommiter;
-				if(UFlibSourceControlHelper::GetFileLastCommitByGlobalGit(RepoDir,RealFile,Data))
-				{
-					FileCommiter.File = AssetPackageName;
-					FileCommiter.Commiter = Data.UserName;
-				}
-				else
-				{
-					FileCommiter.File = AssetPackageName;
-				}
 				MatchedInfo.AssetsCommiter.Add(FileCommiter);
 			}
 		}
 	}
+}
+
+FString UFlibAssetParseHelper::LongPackageNameToPackagePath(const FString& InPackageName)
+{
+	FString AssetName;
+	{
+		int32 FoundIndex;
+		InPackageName.FindLastChar('/', FoundIndex);
+		if (FoundIndex != INDEX_NONE)
+		{
+			AssetName = UKismetStringLibrary::GetSubstring(InPackageName, FoundIndex + 1, InPackageName.Len() - FoundIndex);
+		}
+	}
+	AssetName = InPackageName + TEXT(".") + AssetName;
+	return AssetName;
+}
+
+bool UFlibAssetParseHelper::GetLongPackageNameByObject(UObject* Obj, FString& OutLongPackageName)
+{
+	bool bResult = false;
+	FSoftObjectPath ObjectPath(Obj);
+	if(ObjectPath.IsAsset())
+	{
+		bResult = true;
+		OutLongPackageName = ObjectPath.GetLongPackageName();
+	}
+	return bResult;
+}
+FString UFlibAssetParseHelper::GetPackageExtensionByLongPackageName(const FString& LongPackageName)
+{
+	FSoftObjectPath AssetObjectPaht = LongPackageNameToPackagePath(LongPackageName);
+	FString PackageExtension = FPackageName::GetAssetPackageExtension();
+	{
+		UPackage* Package = FindPackage(NULL, *AssetObjectPaht.GetAssetPathString());
+		if (Package)
+		{
+			Package->FullyLoad();
+		}
+		else
+		{
+			Package = LoadPackage(NULL, *AssetObjectPaht.GetAssetPathString(), LOAD_None);
+		}
+		if(Package)
+		{
+			PackageExtension = Package->ContainsMap() ? FPackageName::GetMapPackageExtension() : FPackageName::GetAssetPackageExtension();
+		}
+	}
+	return PackageExtension;
+}
+
+bool UFlibAssetParseHelper::GetGitOperatorLongPackageName(const FString& RepoDir, const FString& LongPackageName,
+	FFileCommiter& FileCommiter, FGitOperatorCallback callback)
+{
+	bool bResult = false;
+	FString RealFile;
+	FString PackageExtension = GetPackageExtensionByLongPackageName(LongPackageName);
+	FPackageName::TryConvertLongPackageNameToFilename(LongPackageName,RealFile,*PackageExtension);
+			
+	RealFile = FPaths::ConvertRelativePathToFull(RealFile);
+	if(!RealFile.IsEmpty())
+	{
+		RealFile.RemoveFromStart(RepoDir);
+		bResult = callback(TEXT("git"),RepoDir,LongPackageName,RealFile,FileCommiter);
+	}
+	return bResult;
+}
+
+bool UFlibAssetParseHelper::GetGitCommiterByLongPackageName(const FString& RepoDir, const FString& LongPackageName, FFileCommiter& FileCommiter)
+{
+	return GetGitOperatorLongPackageName(RepoDir,LongPackageName,FileCommiter,
+		[](const FString& GitBinary,const FString& RepoDir,const FString& LongPackageName,const FString& FileInRepo,FFileCommiter& FileCommiter)->bool
+		{
+			FGitSourceControlRevisionData Data;
+			if(UFlibSourceControlHelper::GetFileLastCommitByGlobalGit(RepoDir,FileInRepo,Data))
+			{
+				FileCommiter.File = LongPackageName;
+				FileCommiter.Commiter = Data.UserName;
+			}
+			else
+			{
+				FileCommiter.File = LongPackageName;
+				UFlibSourceControlHelper::GetConfigUserName(TEXT("git"),FileCommiter.Commiter);
+			}
+			return true;
+		});
+}
+
+bool UFlibAssetParseHelper::GetLocalEditorByLongPackageName(const FString& RepoDir, const FString& LongPackageName,
+	FFileCommiter& FileCommiter)
+{
+	return GetGitOperatorLongPackageName(RepoDir,LongPackageName,FileCommiter,
+		[](const FString& GitBinary,const FString& RepoDir,const FString& LongPackageName,const FString& FileInRepo,FFileCommiter& FileCommiter)->bool
+		{
+			bool bStatus = false;
+			EGitFileStatus GitFileStatus = UFlibSourceControlHelper::GetFileStatus(TEXT("git"),RepoDir,FileInRepo);
+			if(GitFileStatus != EGitFileStatus::NoEdit)
+			{
+				FileCommiter.File = LongPackageName;
+				UFlibSourceControlHelper::GetConfigUserName(TEXT("git"),FileCommiter.Commiter);
+				bStatus = true;
+			}
+			return bStatus;
+	});
 }
 
 bool NameMatchOperator::Match(const FAssetData& AssetData,const FScannerMatchRule& Rule)

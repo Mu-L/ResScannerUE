@@ -4,12 +4,6 @@
 #include "AssetData.h"
 #include "CoreMinimal.h"
 #include "FMatchRuleTypes.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #include "FlibAssetParseHelper.generated.h"
@@ -45,6 +39,28 @@ public:
 	static TArray<FSoftObjectPath> GetAssetsByGitStatus(const FString& RepoDir,const FString& GitBinaryOpt = TEXT("git"));
 	
 	static void CheckMatchedAssetsCommiter(FMatchedResult& MatchedResult, const FString& RepoDir);
+
+	static FString LongPackageNameToPackagePath(const FString& InPackageName);
+
+	static FString GetPackageExtensionByLongPackageName(const FString& LongPackageName);
+	
+	UFUNCTION(BlueprintCallable,BlueprintPure)
+	static bool GetLongPackageNameByObject(UObject* Obj,FString& OutLongPackageName);
+
+	// git binary path
+	// repo dir
+	// longPackageName
+	// file in repo path
+	// out FileCommiter
+	using FGitOperatorCallback = TFunction<bool(const FString&,const FString&,const FString&,const FString&,FFileCommiter& FileCommiter)>;
+	static bool GetGitOperatorLongPackageName(const FString& RepoDir, const FString& LongPackageName, FFileCommiter& FileCommiter, FGitOperatorCallback callback);
+	
+	// 获取本地文件的Commit修改人
+	UFUNCTION(BlueprintCallable,BlueprintPure)
+	static bool GetGitCommiterByLongPackageName(const FString& RepoDir, const FString& LongPackageName, FFileCommiter& FileCommiter);
+	// 获取本地文件的修改人（未commit）
+	UFUNCTION(BlueprintCallable,BlueprintPure)
+	static bool GetLocalEditorByLongPackageName(const FString& RepoDir, const FString& LongPackageName, FFileCommiter& FileCommiter);
 };
 
 

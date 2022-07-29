@@ -12,6 +12,11 @@ FString FGitChecker::GetRepoDir() const
 	return UFlibAssetParseHelper::ReplaceMarkPath(RepoDir.Path);
 }
 
+FScannerConfig::FScannerConfig()
+{
+	SavePath.Path = TEXT("[PROJECT_SAVED_DIR]/ResScanner");
+}
+
 TArray<FScannerMatchRule> FScannerConfig::GetTableRules() const
 {
 	TArray<FScannerMatchRule> result;

@@ -94,9 +94,89 @@ bool UFlibSourceControlHelper::GetRemoteUrl(const FString& InPathToGitBinary, co
 	return GitSourceControlUtils::GetRemoteUrl(InPathToGitBinary, InRepositoryRoot, OutRemoteUrl);
 }
 
+bool UFlibSourceControlHelper::GetConfigUserName(const FString& InPathToGitBinary, FString& OutUserName)
+{
+	bool bStatus = false;
+	const TArray<FString> Params = {TEXT("user.name")};
+	TArray<FString> Result,OutErrorMessages;
+	bool bRunStatus = UFlibSourceControlHelper::RunGitCommand(FString(TEXT("config")), InPathToGitBinary, TEXT(""), Params, Result, OutErrorMessages);
+	if(bRunStatus && Result.Num())
+	{
+		OutUserName = Result[0];
+		bStatus = true;
+	}
+	return bStatus;
+}
+
+bool UFlibSourceControlHelper::GetConfigUserEmail(const FString& InPathToGitBinary, FString& OutUserEmail)
+{
+	bool bStatus = false;
+	const TArray<FString> Params = {TEXT("user.email")};
+	TArray<FString> Result,OutErrorMessages;
+	bool bRunStatus = UFlibSourceControlHelper::RunGitCommand(FString(TEXT("config")), InPathToGitBinary, TEXT(""), Params, Result, OutErrorMessages);
+	if(bRunStatus && Result.Num())
+	{
+		OutUserEmail = Result[0];
+		bStatus = true;
+	}
+	return bStatus;
+}
+
 bool UFlibSourceControlHelper::FindRootDirectory(const FString& InPath, FString& OutRepositoryRoot)
 {
 	return GitSourceControlUtils::FindRootDirectory(InPath,OutRepositoryRoot);
+}
+
+EGitFileStatus UFlibSourceControlHelper::ParseFileStatus(const FString& FileStatusStr)
+{
+	EGitFileStatus result = EGitFileStatus::NoEdit;
+	if(FileStatusStr.StartsWith(TEXT(" M ")))
+	{
+		result = EGitFileStatus::Modify;
+	}
+	if(FileStatusStr.StartsWith(TEXT(" A ")))
+	{
+		result = EGitFileStatus::Added;
+	}
+	if(FileStatusStr.StartsWith(TEXT(" D ")))
+	{
+		result = EGitFileStatus::Deleted;
+	}
+	if(FileStatusStr.StartsWith(TEXT(" R ")))
+	{
+		result = EGitFileStatus::Renamed;
+	}
+	if(FileStatusStr.StartsWith(TEXT(" C ")))
+	{
+		result = EGitFileStatus::Copoed;
+	}
+	if(FileStatusStr.StartsWith(TEXT(" U ")))
+	{
+		result = EGitFileStatus::Unmerged;
+	}
+	if(FileStatusStr.StartsWith(TEXT("?? ")))
+	{
+		result = EGitFileStatus::Untracked;
+	}
+	return result;
+}
+
+EGitFileStatus UFlibSourceControlHelper::GetFileStatus(const FString& InGitBinaey, const FString& InRepoRoot,
+                                                       const FString InFile)
+{
+	EGitFileStatus StatusResult = EGitFileStatus::NoEdit;
+	TArray<FString> Result;
+	TArray<FString> OutErrorMessages;
+	TArray<FString> Params{
+		InFile,
+		TEXT("--short")
+	};
+	bool bRunStatus = UFlibSourceControlHelper::RunGitCommand(FString(TEXT("status")), InGitBinaey, InRepoRoot, Params, Result, OutErrorMessages);
+	for(auto& ChangedFile:Result)
+	{
+		StatusResult = ParseFileStatus(ChangedFile);
+	}
+	return StatusResult;
 }
 
 bool UFlibSourceControlHelper::RunGetHistory(const FString& InPathToGitBinary, const FString& InRepositoryRoot, const FString& InFile, bool bMergeConflict, TArray<FString>& OutErrorMessages, TArray<FGitSourceControlRevisionData>& OutHistory, int32 InHistoryDepth)

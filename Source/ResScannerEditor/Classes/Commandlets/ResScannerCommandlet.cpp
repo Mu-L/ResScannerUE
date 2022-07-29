@@ -100,6 +100,7 @@ int32 UResScannerCommandlet::Main(const FString& Params)
 	int iProcessResult = 0;
 	if (FFileHelper::LoadFileToString(JsonContent, *config_path))
 	{
+		UE_LOG(LogResScannerCommandlet, Display, TEXT("cofnig file:\n%s"), *JsonContent);
 		
 		FScannerConfig ScannerConfig;
 		TemplateHelper::TDeserializeJsonStringAsStruct(JsonContent,ScannerConfig);
@@ -110,10 +111,10 @@ int32 UResScannerCommandlet::Main(const FString& Params)
 		{
 			ScannerConfig.RuleWhileListIDs.Add(UKismetStringLibrary::Conv_StringToInt(Value));
 		}
-		ScannerConfig.GlobalScanFilters.Filters = ReplacePropertyHelper::ParserFilters(Params,ADD_GLOBAL_FILTER);
-		ScannerConfig.GlobalScanFilters.Assets = ReplacePropertyHelper::ParserAssets(Params,ADD_GLOBAL_ASSETS);
-		ScannerConfig.GlobalIgnoreFilters.Filters = ReplacePropertyHelper::ParserFilters(Params,ADD_GLOBAL_IGNORE_FILTER);
-		ScannerConfig.GlobalIgnoreFilters.Assets = ReplacePropertyHelper::ParserAssets(Params,ADD_GLOBAL_IGNORE_ASSETS);
+		ScannerConfig.GlobalScanFilters.Filters.Append(ReplacePropertyHelper::ParserFilters(Params,ADD_GLOBAL_FILTER));
+		ScannerConfig.GlobalScanFilters.Assets.Append(ReplacePropertyHelper::ParserAssets(Params,ADD_GLOBAL_ASSETS));
+		ScannerConfig.GlobalIgnoreFilters.Filters.Append(ReplacePropertyHelper::ParserFilters(Params,ADD_GLOBAL_IGNORE_FILTER));
+		ScannerConfig.GlobalIgnoreFilters.Assets.Append(ReplacePropertyHelper::ParserAssets(Params,ADD_GLOBAL_IGNORE_ASSETS));
 		
 		ScannerConfig.bByGlobalScanFilters = ScannerConfig.bByGlobalScanFilters || bIsFileCheck;
 		ScannerConfig.GlobalScanFilters.Assets.Append(InAssets);

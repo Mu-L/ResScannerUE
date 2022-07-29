@@ -28,4 +28,7 @@ public:
 	static bool CompileBlueprint(UObject* Blueprint,int32& OutNumError,int32& OutNumWarning);
 	UFUNCTION(BlueprintCallable)
 	static bool BlueprintHasError(UObject* Blueprint,bool bWarningAsError = false);
+	
+	UFUNCTION(BlueprintCallable,BlueprintPure)
+	static FVector2D GetTextureCubeSize(UTextureCube* TextureCube);
 };

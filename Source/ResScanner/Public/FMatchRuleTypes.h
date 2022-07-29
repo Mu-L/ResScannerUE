@@ -359,6 +359,8 @@ struct RESSCANNER_API FScannerConfig
 {
 	GENERATED_USTRUCT_BODY()
 public:
+	FScannerConfig();
+	
 	FORCEINLINE static FScannerConfig* Get()
 	{
 		static FScannerConfig StaticIns;
@@ -384,6 +386,8 @@ public:
 	bool bRuleWhiteList = false;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则白名单（名单中的规则才会被执行）",Category="WhiteList",meta=(EditCondition="bRuleWhiteList"))
 	TArray<int32> RuleWhileListIDs;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则黑名单（名单中的规则不被执行）",Category="BlockList")
+	TArray<int32> RuleBlockListIDs;
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="启用规则数据表",Category="RulesTable")
 	bool bUseRulesTable = false;
