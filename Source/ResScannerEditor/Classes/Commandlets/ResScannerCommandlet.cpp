@@ -78,7 +78,7 @@ int32 UResScannerCommandlet::Main(const FString& Params)
 	bool bFileListStatus = FParse::Value(*Params, *FString(COMMIT_FILE_LIST).ToLower(), CommitFileList);
 	if (!bFileListStatus)
 	{
-		UE_LOG(LogResScannerCommandlet, Warning, TEXT("not %s=."),COMMIT_FILE_LIST);
+		UE_LOG(LogResScannerCommandlet, Display, TEXT("not %s=."),COMMIT_FILE_LIST);
 	}
 	else
 	{
@@ -86,8 +86,8 @@ int32 UResScannerCommandlet::Main(const FString& Params)
 	}
 
 	// PRIVATE_GAllowCommandletRendering = true;
-	
-	if(IsRunningCommandlet())
+	static const bool bNoScanPrimaryAsset = FParse::Param(FCommandLine::Get(), TEXT("NoScanPrimaryAsset"));
+	if(IsRunningCommandlet() && !bNoScanPrimaryAsset)
 	{
 		FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
 		AssetRegistryModule.Get().SearchAllAssets(true);

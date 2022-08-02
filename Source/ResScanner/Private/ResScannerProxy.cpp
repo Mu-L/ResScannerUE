@@ -264,6 +264,7 @@ FString UResScannerProxy::SerializeLiteResult()
 			}
 		}
 	}
+	Result += TEXT("-------------------------------------------\n");
 	return Result;
 }
 

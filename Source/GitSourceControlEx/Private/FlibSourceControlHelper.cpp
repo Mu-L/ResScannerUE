@@ -97,13 +97,23 @@ bool UFlibSourceControlHelper::GetRemoteUrl(const FString& InPathToGitBinary, co
 bool UFlibSourceControlHelper::GetConfigUserName(const FString& InPathToGitBinary, FString& OutUserName)
 {
 	bool bStatus = false;
-	const TArray<FString> Params = {TEXT("user.name")};
-	TArray<FString> Result,OutErrorMessages;
-	bool bRunStatus = UFlibSourceControlHelper::RunGitCommand(FString(TEXT("config")), InPathToGitBinary, TEXT(""), Params, Result, OutErrorMessages);
-	if(bRunStatus && Result.Num())
+	
+	FString GitLocalUsername;
+	bool bGitUsernameCmd = FParse::Value(FCommandLine::Get(), TEXT("-gitusername="), GitLocalUsername);
+	if (bGitUsernameCmd)
 	{
-		OutUserName = Result[0];
-		bStatus = true;
+		OutUserName = GitLocalUsername;
+	}
+	else
+	{
+		const TArray<FString> Params = {TEXT("user.name")};
+		TArray<FString> Result,OutErrorMessages;
+		bool bRunStatus = UFlibSourceControlHelper::RunGitCommand(FString(TEXT("config")), InPathToGitBinary, TEXT(""), Params, Result, OutErrorMessages);
+		if(bRunStatus && Result.Num())
+		{
+			OutUserName = Result[0];
+			bStatus = true;
+		}
 	}
 	return bStatus;
 }
