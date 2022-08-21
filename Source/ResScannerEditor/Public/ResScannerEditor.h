@@ -7,6 +7,17 @@
 #include "Modules/ModuleManager.h"
 #include "ThreadUtils/FProcWorkerThread.hpp"
 
+#include "ResScannerEditor.generated.h"
+
+
+UCLASS()
+class RESSCANNEREDITOR_API UResScannerRegister : public UObject
+{
+	GENERATED_BODY()
+	UFUNCTION(meta=(QEToolBar="FFUtils/SystemUtils.ResScanner", QEIcon="ResScanner/Resources/Icon128.png"))
+	static void OpenResScannerEditor();
+};
+
 class FResScannerEditorModule : public IModuleInterface
 {
 public:

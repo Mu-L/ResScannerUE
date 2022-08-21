@@ -67,6 +67,7 @@ FString UFlibAssetParseHelper::GetPropertyValueByName(UObject* Obj, const FStrin
 
 TArray<FAssetData> UFlibAssetParseHelper::GetAssetsByFiltersByClass(const TArray<UClass*>& AssetTypes, const TArray<FDirectoryPath>& FilterDirectorys, bool bRecursiveClasses)
 {
+	SCOPED_NAMED_EVENT_TEXT("GetAssetsByFiltersByClass",FColor::Red);
 	TArray<FString> Types;
 	for(auto& Type:AssetTypes)
 	{
@@ -108,6 +109,7 @@ TArray<FAssetData> UFlibAssetParseHelper::GetAssetsByFilters(const TArray<FStrin
 
 TArray<FAssetData> UFlibAssetParseHelper::GetAssetsByObjectPath(const TArray<FSoftObjectPath>& SoftObjectPaths)
 {
+	SCOPED_NAMED_EVENT_TEXT("GetAssetsByObjectPath",FColor::Red);
 	TArray<FAssetData> result;
 	UAssetManager& AssetManager = UAssetManager::Get();
 	for(const auto& ObjectPath:SoftObjectPaths)
@@ -272,6 +274,7 @@ FString UFlibAssetParseHelper::ReplaceMarkPath(const FString& Src)
 
 TArray<FSoftObjectPath> ParserGitFilesToObjectPaths(TArray<FString> GitCommitFiles)
 {
+	SCOPED_NAMED_EVENT_TEXT("ParserGitFilesToObjectPaths",FColor::Red);
 	TArray<FSoftObjectPath> ResultAssets;
 	for(auto& File:GitCommitFiles)
 	{
@@ -296,6 +299,7 @@ TArray<FSoftObjectPath> ParserGitFilesToObjectPaths(TArray<FString> GitCommitFil
 TArray<FSoftObjectPath> UFlibAssetParseHelper::GetAssetsByGitChecker(const FGitChecker& GitChecker,
 	const FString& GitBinaryOpt)
 {
+	SCOPED_NAMED_EVENT_TEXT("UFlibAssetParseHelper::GetAssetsByGitChecker",FColor::Red);
 	TArray<FSoftObjectPath> ResultAssets;
 	if(GitChecker.bGitCheck && GitChecker.bDiffCommit)
 	{
@@ -312,6 +316,7 @@ TArray<FSoftObjectPath> UFlibAssetParseHelper::GetAssetsByGitChecker(const FGitC
 TArray<FSoftObjectPath> UFlibAssetParseHelper::GetAssetsByGitStatus(const FString& RepoDir,
 	const FString& GitBinaryOpt)
 {
+	SCOPED_NAMED_EVENT_TEXT("GetAssetsByGitStatus",FColor::Red);
 	auto IsUasset = [](const FString& File)->bool
 	{
 		TArray<FString> Extersions = {
@@ -350,6 +355,7 @@ TArray<FSoftObjectPath> UFlibAssetParseHelper::GetAssetsByGitStatus(const FStrin
 TArray<FSoftObjectPath> UFlibAssetParseHelper::GetAssetsByGitCommitHash(const FString& RepoDir,
 	const FString& BeginHash, const FString& EndHand, const FString& GitBinaryOpt)
 {
+	SCOPED_NAMED_EVENT_TEXT("UFlibAssetParseHelper::GetAssetsByGitCommitHash",FColor::Red);
 	TArray<FSoftObjectPath> ResultAssets;
 	TArray<FString> GitCommitFiles;
 	TArray<FString> OutErrorMessages;
@@ -362,6 +368,7 @@ TArray<FSoftObjectPath> UFlibAssetParseHelper::GetAssetsByGitCommitHash(const FS
 
 void UFlibAssetParseHelper::CheckMatchedAssetsCommiter(FMatchedResult& MatchedResult, const FString& RepoDir)
 {
+	SCOPED_NAMED_EVENT_TEXT("UFlibAssetParseHelper::CheckMatchedAssetsCommiter",FColor::Red);
 	for(auto& MatchedInfo:MatchedResult.MatchedAssets)
 	{
 		for(const auto& AssetPackageName:MatchedInfo.AssetPackageNames)

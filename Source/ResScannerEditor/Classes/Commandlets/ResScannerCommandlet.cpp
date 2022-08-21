@@ -54,9 +54,9 @@ TArray<FSoftObjectPath> GetCommitFileListObjects(const FString& ContentDir,const
 	return result;
 }
 
-
 int32 UResScannerCommandlet::Main(const FString& Params)
 {
+	SCOPED_NAMED_EVENT_TEXT("UResScannerCommandlet::Main",FColor::Red);
 	UE_LOG(LogResScannerCommandlet, Display, TEXT("UResScannerCommandlet::Main"));
 	FString config_path;
 	bool bConfigStatus = FParse::Value(*Params, *FString(COOKER_CONFIG_PARAM_NAME).ToLower(), config_path);
@@ -89,10 +89,11 @@ int32 UResScannerCommandlet::Main(const FString& Params)
 	static const bool bNoScanPrimaryAsset = FParse::Param(FCommandLine::Get(), TEXT("NoScanPrimaryAsset"));
 	if(IsRunningCommandlet() && !bNoScanPrimaryAsset)
 	{
+		SCOPED_NAMED_EVENT_TEXT("SearchAllAssets",FColor::Red);
 		FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
 		AssetRegistryModule.Get().SearchAllAssets(true);
 	}
-
+	
 	TMap<FString, FString> TokenValues = ReplacePropertyHelper::GetCommandLineParamsMap(Params);
 	
 	

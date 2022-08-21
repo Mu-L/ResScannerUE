@@ -8,6 +8,7 @@ DEFINE_LOG_CATEGORY(LogResScannerProxy);
 
 void UResScannerProxy::Init()
 {
+	SCOPED_NAMED_EVENT_TEXT("UResScannerProxy::Init",FColor::Red);
 	MatchedResult.MatchedAssets.Empty();
 	if(!GetScannerConfig().IsValid())
 	{
@@ -26,6 +27,7 @@ void UResScannerProxy::Shutdown()
 
 void UResScannerProxy::ScanSingleRule(const TArray<FAssetData>& GlobalAssets,const FScannerMatchRule& ScannerRule,int32 RuleID/* = 0*/)
 {
+	FScopedNamedEventStatic ScanSingleRule(FColor::Red,*ScannerRule.RuleName);
 	FRuleMatchedInfo RuleMatchedInfo;
 	// FScannerMatchRule& ScannerRule = GetScannerConfig()->ScannerRules[RuleID];
 	if(!ScannerRule.bEnableRule)
@@ -99,6 +101,7 @@ void UResScannerProxy::ScanSingleRule(const TArray<FAssetData>& GlobalAssets,con
 
 void UResScannerProxy::DoScan()
 {
+	SCOPED_NAMED_EVENT_TEXT("UResScannerProxy::DoScan",FColor::Red);
 	FString ScanConfigContent;
 	TemplateHelper::TSerializeStructAsJsonString(*GetScannerConfig(),ScanConfigContent);
 	UE_LOG(LogResScannerProxy, Display, TEXT("%s"), *ScanConfigContent);

@@ -16,6 +16,12 @@ static const FName ResScannerTabName("ResScanner");
 
 #define LOCTEXT_NAMESPACE "FResScannerEditorModule"
 
+void UResScannerRegister::OpenResScannerEditor()
+{
+	FResScannerEditorModule& ResScannerModule = FModuleManager::LoadModuleChecked<FResScannerEditorModule>(ResScannerTabName);
+	ResScannerModule.PluginButtonClicked();
+}
+
 FResScannerEditorModule& FResScannerEditorModule::Get()
 {
 	FResScannerEditorModule& Module = FModuleManager::GetModuleChecked<FResScannerEditorModule>("ResScannerEditor");
@@ -24,6 +30,10 @@ FResScannerEditorModule& FResScannerEditorModule::Get()
 
 void FResScannerEditorModule::StartupModule()
 {
+	if(IsRunningCommandlet())
+	{
+		GConfig->SetBool(TEXT("/Script/LiveCoding.LiveCodingSettings"),TEXT("bEnabled"),false,GEditorPerProjectIni);
+	}
 	FResScannerStyle::Initialize();
 	FResScannerStyle::ReloadTextures();
 	FResScannerCommands::Register();
@@ -39,6 +49,10 @@ void FResScannerEditorModule::StartupModule()
 		FResScannerCommands::Get().PluginAction,
 		FExecuteAction::CreateRaw(this, &FResScannerEditorModule::PluginButtonClicked),
 		FCanExecuteAction());
+
+	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(ResScannerTabName, FOnSpawnTab::CreateRaw(this, &FResScannerEditorModule::OnSpawnPluginTab))
+		.SetDisplayName(LOCTEXT("FArtPathEditorTabTitle", "ArtPathEditor"))
+		.SetMenuType(ETabSpawnerMenuType::Hidden);
 	
 	FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor");
 	{
@@ -48,10 +62,10 @@ void FResScannerEditorModule::StartupModule()
 		LevelEditorModule.GetMenuExtensibilityManager()->AddExtender(MenuExtender);
 
 		// settings
-		TSharedPtr<FExtender> ToolbarExtender = MakeShareable(new FExtender);
-		ToolbarExtender->AddToolBarExtension("Settings", EExtensionHook::After, PluginCommands, FToolBarExtensionDelegate::CreateRaw(this, &FResScannerEditorModule::AddToolbarExtension));
-
-		LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(ToolbarExtender);
+		// TSharedPtr<FExtender> ToolbarExtender = MakeShareable(new FExtender);
+		// ToolbarExtender->AddToolBarExtension("Settings", EExtensionHook::After, PluginCommands, FToolBarExtensionDelegate::CreateRaw(this, &FResScannerEditorModule::AddToolbarExtension));
+		// 
+		// LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(ToolbarExtender);
 	}
 
 

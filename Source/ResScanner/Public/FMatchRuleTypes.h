@@ -165,9 +165,9 @@ struct FAssetFilters
 {
 	GENERATED_USTRUCT_BODY()
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,DisplayName="扫描目录列表",meta = (RelativeToGameContentDir, LongPackageName))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,DisplayName="目录列表",meta = (RelativeToGameContentDir, LongPackageName))
 	TArray<FDirectoryPath> Filters;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="扫描资源列表")
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="资源列表")
 	TArray<FSoftObjectPath> Assets;
 };
 

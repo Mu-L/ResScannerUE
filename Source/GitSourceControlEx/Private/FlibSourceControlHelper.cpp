@@ -39,6 +39,7 @@ bool UFlibSourceControlHelper::DiffVersionByGlobalGit(const FString& InRepoRoot,
 bool UFlibSourceControlHelper::GitStatus(const FString& InGitBinaey, const FString& InRepoRoot,
 	TArray<FString>& OutResault, const FString& DiffFilter)
 {
+	SCOPED_NAMED_EVENT_TEXT("UFlibSourceControlHelper::GitStatus",FColor::Red);
 	TArray<FString> Result;
 	TArray<FString> OutErrorMessages;
 	TArray<FString> Params{
@@ -96,31 +97,45 @@ bool UFlibSourceControlHelper::GetRemoteUrl(const FString& InPathToGitBinary, co
 
 bool UFlibSourceControlHelper::GetConfigUserName(const FString& InPathToGitBinary, FString& OutUserName)
 {
-	bool bStatus = false;
-	
-	FString GitLocalUsername;
-	bool bGitUsernameCmd = FParse::Value(FCommandLine::Get(), TEXT("-gitusername="), GitLocalUsername);
-	if (bGitUsernameCmd)
+	SCOPED_NAMED_EVENT_TEXT("GetConfigUserName",FColor::Red);
+	static FString GitUserName;
+
+	if(!GitUserName.IsEmpty())
 	{
-		OutUserName = GitLocalUsername;
+		OutUserName = GitUserName;
+		return true;
 	}
-	else
+	
+	bool bGitUsernameCmd = FParse::Value(FCommandLine::Get(), TEXT("-gitusername="), GitUserName);
+	if (!bGitUsernameCmd)
 	{
 		const TArray<FString> Params = {TEXT("user.name")};
 		TArray<FString> Result,OutErrorMessages;
 		bool bRunStatus = UFlibSourceControlHelper::RunGitCommand(FString(TEXT("config")), InPathToGitBinary, TEXT(""), Params, Result, OutErrorMessages);
 		if(bRunStatus && Result.Num())
 		{
-			OutUserName = Result[0];
-			bStatus = true;
+			GitUserName = Result[0];
 		}
 	}
-	return bStatus;
+
+	OutUserName = GitUserName;
+	return !GitUserName.IsEmpty();
 }
 
 bool UFlibSourceControlHelper::GetConfigUserEmail(const FString& InPathToGitBinary, FString& OutUserEmail)
 {
+	SCOPED_NAMED_EVENT_TEXT("GetConfigUserEmail",FColor::Red);
 	bool bStatus = false;
+
+	static FString UserEmail;
+
+	if(!UserEmail.IsEmpty())
+	{
+		OutUserEmail = UserEmail;
+		bStatus = true;
+		return bStatus;
+	}
+	
 	const TArray<FString> Params = {TEXT("user.email")};
 	TArray<FString> Result,OutErrorMessages;
 	bool bRunStatus = UFlibSourceControlHelper::RunGitCommand(FString(TEXT("config")), InPathToGitBinary, TEXT(""), Params, Result, OutErrorMessages);
@@ -134,6 +149,7 @@ bool UFlibSourceControlHelper::GetConfigUserEmail(const FString& InPathToGitBina
 
 bool UFlibSourceControlHelper::FindRootDirectory(const FString& InPath, FString& OutRepositoryRoot)
 {
+	SCOPED_NAMED_EVENT_TEXT("UFlibSourceControlHelper::FindRootDirectory",FColor::Red);
 	return GitSourceControlUtils::FindRootDirectory(InPath,OutRepositoryRoot);
 }
 
