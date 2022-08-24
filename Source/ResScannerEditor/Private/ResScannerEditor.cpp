@@ -113,7 +113,16 @@ void FResScannerEditorModule::StartupModule()
 	UPackage::PackageSavedEvent.AddRaw(this,&FResScannerEditorModule::PackageSaved);
 
 	const UResScannerEditorSettings* EditorSetting = GetDefault<UResScannerEditorSettings>();
-	if(::IsRunningCommandlet() && EditorSetting->bEnableCookingCheck)
+
+	FString CommandletName;
+	bool bIsCommandlet = FParse::Value(FCommandLine::Get(), TEXT("-run="), CommandletName);
+	bool bIsCookCommandlet = false;
+	if(bIsCommandlet && !CommandletName.IsEmpty())
+	{
+		bIsCookCommandlet = CommandletName.Equals(TEXT("cook"),ESearchCase::IgnoreCase);
+	}
+	
+	if(::IsRunningCommandlet() && bIsCookCommandlet && EditorSetting->bEnableCookingCheck)
 	{
 		ScannerPackageTracker = MakeShareable(new FScannerPackageTracker);
 		FCoreDelegates::OnEnginePreExit.AddRaw(this,&FResScannerEditorModule::OnEnginePreExit);
