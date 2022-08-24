@@ -17,24 +17,20 @@ public:
     UFUNCTION(BlueprintCallable)
     virtual void Shutdown();
     UFUNCTION(BlueprintCallable)
-    virtual void DoScan();
+    virtual FMatchedResult DoScan();
     UFUNCTION(BlueprintCallable)
     virtual void SetScannerConfig(FScannerConfig InConfig);
 
-    void ScanSingleRule(const TArray<FAssetData>& GlobalAssets,const FScannerMatchRule& ScannerRule,int32 RuleID = 0);
+    FRuleMatchedInfo ScanSingleRule(const TArray<FAssetData>& GlobalAssets,const FScannerMatchRule& ScannerRule,int32 RuleID = 0);
     
     virtual TSharedPtr<FScannerConfig> GetScannerConfig(){return ScannerConfig;}
     virtual TMap<FString,TSharedPtr<IMatchOperator>>& GetMatchOperators(){return MatchOperators;}
-    virtual FMatchedResult& GetScanResult(){return MatchedResult;}
-
-    FString SerializeResult();
     
-
+    FMatchedResult ScanAssets(const TArray<FAssetData>& Assets);
+    
 protected:
-    FString SerializeLiteResult();
     virtual void PostProcessorMatchRule(const FScannerMatchRule& Rule,const FRuleMatchedInfo& RuleMatchedInfo);    
 private:
-    FMatchedResult MatchedResult;
     TSharedPtr<FScannerConfig> ScannerConfig;
     TMap<FString,TSharedPtr<IMatchOperator>> MatchOperators;
 };

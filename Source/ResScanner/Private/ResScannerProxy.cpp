@@ -9,7 +9,6 @@ DEFINE_LOG_CATEGORY(LogResScannerProxy);
 void UResScannerProxy::Init()
 {
 	SCOPED_NAMED_EVENT_TEXT("UResScannerProxy::Init",FColor::Red);
-	MatchedResult.MatchedAssets.Empty();
 	if(!GetScannerConfig().IsValid())
 	{
 		ScannerConfig = MakeShareable(new FScannerConfig);
@@ -22,10 +21,9 @@ void UResScannerProxy::Init()
 
 void UResScannerProxy::Shutdown()
 {
-	MatchedResult.MatchedAssets.Empty();
 }
 
-void UResScannerProxy::ScanSingleRule(const TArray<FAssetData>& GlobalAssets,const FScannerMatchRule& ScannerRule,int32 RuleID/* = 0*/)
+FRuleMatchedInfo UResScannerProxy::ScanSingleRule(const TArray<FAssetData>& GlobalAssets,const FScannerMatchRule& ScannerRule,int32 RuleID/* = 0*/)
 {
 	FScopedNamedEventStatic ScanSingleRule(FColor::Red,*ScannerRule.RuleName);
 	FRuleMatchedInfo RuleMatchedInfo;
@@ -33,22 +31,27 @@ void UResScannerProxy::ScanSingleRule(const TArray<FAssetData>& GlobalAssets,con
 	if(!ScannerRule.bEnableRule)
 	{
 		UE_LOG(LogResScannerProxy,Warning,TEXT("rule %s is missed!"),*ScannerRule.RuleName);
-		return;
+		return RuleMatchedInfo;
 	}
 	if(!ScannerRule.ScanFilters.Num() && !ScannerConfig->bByGlobalScanFilters)
 	{
 		UE_LOG(LogResScannerProxy,Warning,TEXT("rule %s not contain any filters!"),*ScannerRule.RuleName);
-		return;
+		return RuleMatchedInfo;
 	}
 	if(!ScannerRule.HasValidRules())
 	{
 		UE_LOG(LogResScannerProxy,Warning,TEXT("rule %s not contain any rules!"),*ScannerRule.RuleName);
-		return;
+		return RuleMatchedInfo;
 	}
-	UE_LOG(LogResScannerProxy,Display,TEXT("RuleName %s is Scanning."),*ScannerRule.RuleName);
+	
 	FString RuleConfig;
 	TemplateHelper::TSerializeStructAsJsonString(ScannerRule,RuleConfig);
-	UE_LOG(LogResScannerProxy,Display,TEXT("RuleName %s is Scanning. config:\n%s"),*ScannerRule.RuleName,*RuleConfig);
+
+	if(GetScannerConfig()->bVerboseLog)
+	{
+		UE_LOG(LogResScannerProxy,Display,TEXT("RuleName %s is Scanning."),*ScannerRule.RuleName);
+		UE_LOG(LogResScannerProxy,Display,TEXT("RuleName %s is Scanning. config:\n%s"),*ScannerRule.RuleName,*RuleConfig);
+	}
 	
 	TArray<FAssetData> FilterAssets;
 	if(GetScannerConfig()->bByGlobalScanFilters || GetScannerConfig()->GitChecker.bGitCheck)
@@ -71,7 +74,7 @@ void UResScannerProxy::ScanSingleRule(const TArray<FAssetData>& GlobalAssets,con
 	{
 		if(!UFlibAssetParseHelper::IsIgnoreAsset(Asset,FinalIgnoreFilters))
 		{
-			bool bMatchAllRules = true;
+			bool bMatchAllRules = !!GetMatchOperators().Num() ? true : false;
 			for(const auto& Operator:GetMatchOperators())
 			{
 				bMatchAllRules = Operator.Value->Match(Asset,ScannerRule);
@@ -85,28 +88,29 @@ void UResScannerProxy::ScanSingleRule(const TArray<FAssetData>& GlobalAssets,con
 				RuleMatchedInfo.Assets.AddUnique(Asset);
 				RuleMatchedInfo.AssetPackageNames.AddUnique(Asset.PackageName.ToString());
 			}
-			UE_LOG(LogResScannerProxy,Display,TEXT("\t%s match status is %s!"),*Asset.GetFullName(),bMatchAllRules ? TEXT("TRUE"):TEXT("FALSE"));
+			if(GetScannerConfig()->bVerboseLog)
+			{
+				UE_LOG(LogResScannerProxy,Display,TEXT("\t%s match status is %s!"),*Asset.GetFullName(),bMatchAllRules ? TEXT("TRUE"):TEXT("FALSE"));
+			}
+			
 		}
 	}
-	if(!!RuleMatchedInfo.Assets.Num())
+	
+	if(!!RuleMatchedInfo.Assets.Num() && ScannerRule.bEnablePostProcessor)
 	{
-		if(ScannerRule.bEnablePostProcessor)
-		{
-			// 对扫描之后的资源进行后处理（可以执行自动化处理操作）
-			PostProcessorMatchRule(ScannerRule,RuleMatchedInfo);
-		}
-		MatchedResult.MatchedAssets.Add(RuleMatchedInfo);
+		// 对扫描之后的资源进行后处理（可以执行自动化处理操作）
+		PostProcessorMatchRule(ScannerRule,RuleMatchedInfo);
 	}
+	return RuleMatchedInfo;
 }
 
-void UResScannerProxy::DoScan()
+FMatchedResult UResScannerProxy::DoScan()
 {
 	SCOPED_NAMED_EVENT_TEXT("UResScannerProxy::DoScan",FColor::Red);
 	FString ScanConfigContent;
 	TemplateHelper::TSerializeStructAsJsonString(*GetScannerConfig(),ScanConfigContent);
 	UE_LOG(LogResScannerProxy, Display, TEXT("%s"), *ScanConfigContent);
-	
-	MatchedResult.MatchedAssets.Empty();
+
 	TArray<FAssetData> GlobalAssets;
 	if(GetScannerConfig()->bByGlobalScanFilters)
 	{
@@ -137,44 +141,21 @@ void UResScannerProxy::DoScan()
 			UE_LOG(LogResScannerProxy,Display,TEXT("%s is not a valid git repo."),*OutRepoDir);
 		}
 	}
+
+	FMatchedResult MatchedResult = ScanAssets(GlobalAssets);
 	
-	if(GetScannerConfig()->bUseRulesTable)
-	{
-		TArray<FScannerMatchRule> ImportRules = GetScannerConfig()->GetTableRules();
-		
-		for(int32 RuleID = 0;RuleID < ImportRules.Num();++RuleID)
-		{
-			bool bCheck = GetScannerConfig()->bRuleWhiteList ? GetScannerConfig()->RuleWhileListIDs.Contains(RuleID) : true;
-			bCheck = GetScannerConfig()->RuleBlockListIDs.Contains(RuleID) ? false : bCheck;
-			if(bCheck)
-			{
-				ScanSingleRule(GlobalAssets,ImportRules[RuleID],RuleID);
-			}
-		}
-	}
+	bool bRecordCommiter = GetScannerConfig()->GitChecker.bGitCheck && GetScannerConfig()->GitChecker.bRecordCommiter;
+	MatchedResult.RecordGitCommiter(bRecordCommiter,GetScannerConfig()->GitChecker.GetRepoDir());
 	
-	for(int32 RuleID = 0;RuleID < GetScannerConfig()->ScannerRules.Num();++RuleID)
-	{
-		bool bCheck = GetScannerConfig()->bRuleWhiteList ? GetScannerConfig()->RuleWhileListIDs.Contains(RuleID) : true;
-		bCheck = GetScannerConfig()->RuleBlockListIDs.Contains(RuleID) ? false : bCheck;
-		if(bCheck)
-		{
-			ScanSingleRule(GlobalAssets,GetScannerConfig()->ScannerRules[RuleID],RuleID);
-		}
-	}
+	FString SaveBasePath = UFlibAssetParseHelper::ReplaceMarkPath(GetScannerConfig()->SavePath.Path);
+
 
 	FString Name = GetScannerConfig()->ConfigName;
 	if(Name.IsEmpty())
 	{
 		Name = FDateTime::UtcNow().ToString();
 	}
-	FRuleMatchedInfo::ResetTransient();
-	FRuleMatchedInfo::SetSerializeTransient(GetScannerConfig()->GitChecker.bGitCheck && GetScannerConfig()->GitChecker.bRecordCommiter);
-	if(GetScannerConfig()->GitChecker.bRecordCommiter)
-	{
-		UFlibAssetParseHelper::CheckMatchedAssetsCommiter(MatchedResult,GetScannerConfig()->GitChecker.GetRepoDir());
-	}
-	FString SaveBasePath = UFlibAssetParseHelper::ReplaceMarkPath(GetScannerConfig()->SavePath.Path);
+	
 	// serialize config
 	if(GetScannerConfig()->bSaveConfig)
 	{
@@ -188,13 +169,15 @@ void UResScannerProxy::DoScan()
 			UFlibAssetParseHelper::CreateSaveFileNotify(Msg,SavePath,SNotificationItem::CS_Success);
 		}
 	}
+	
 	FString ResultSavePath = FPaths::Combine(SaveBasePath,FString::Printf(TEXT("%s_result.json"),*Name));
 	IFileManager::Get().Delete(*ResultSavePath);
 	
 	// serialize matched assets
-	if(GetScannerConfig()->bSaveResult && MatchedResult.MatchedAssets.Num())
+	if(GetScannerConfig()->bSaveResult && MatchedResult.HasValidResult())
 	{
-		FString SerializedJsonStr = SerializeResult();
+		FString SerializedJsonStr = MatchedResult.SerializeResult(GetScannerConfig()->bSavaeLiteResult);
+		
 		if(FFileHelper::SaveStringToFile(SerializedJsonStr, *ResultSavePath,FFileHelper::EEncodingOptions::ForceUTF8) && !IsRunningCommandlet())
 		{
 			FText Msg = LOCTEXT("SavedScanResultMag", "Successd to Export the scan result.");
@@ -208,6 +191,7 @@ void UResScannerProxy::DoScan()
 			}
 		}
 	}
+	return MatchedResult;
 }
 
 void UResScannerProxy::SetScannerConfig(FScannerConfig InConfig)
@@ -219,57 +203,49 @@ void UResScannerProxy::SetScannerConfig(FScannerConfig InConfig)
 	*ScannerConfig = InConfig;
 }
 
-FString UResScannerProxy::SerializeResult()
+FMatchedResult UResScannerProxy::ScanAssets(const TArray<FAssetData>& Assets)
 {
-	FString OutString;
-	if(GetScannerConfig()->bSavaeLiteResult)
+
+	FMatchedResult ScanResult;
+	auto ScanAssetByRule = [this](const TArray<FAssetData>& Assets,const FScannerMatchRule& Rule,int32 RuleID,FRuleMatchedInfo& OutResult)->bool
 	{
-		OutString = SerializeLiteResult();
-	}
-	else
+		bool bResult = false;
+		if(GetScannerConfig()->IsAllowRule(Rule,RuleID))
+		{
+			OutResult = ScanSingleRule(Assets,Rule,RuleID);
+			bResult = !!OutResult.Assets.Num();
+		}
+		return bResult;
+	};
+	
+	if(GetScannerConfig()->bUseRulesTable)
 	{
-		TemplateHelper::TSerializeStructAsJsonString(GetScanResult(),OutString);
+		TArray<FScannerMatchRule> ImportRules = GetScannerConfig()->GetTableRules();
+		
+		for(int32 RuleID = 0;RuleID < ImportRules.Num();++RuleID)
+		{
+			const auto& ScanRule = ImportRules[RuleID];
+			FRuleMatchedInfo RuleMatchedInfo;
+			if(ScanAssetByRule(Assets,ScanRule,RuleID,RuleMatchedInfo))
+			{
+				ScanResult.GetMatchedInfo().Add(RuleMatchedInfo);
+			}
+		}
 	}
-	return OutString;
+	
+	for(int32 RuleID = 0;RuleID < GetScannerConfig()->ScannerRules.Num();++RuleID)
+	{
+		const auto& ScanRule = GetScannerConfig()->ScannerRules[RuleID];
+		FRuleMatchedInfo RuleMatchedInfo;
+		if(ScanAssetByRule(Assets,ScanRule,RuleID,RuleMatchedInfo))
+		{
+			ScanResult.GetMatchedInfo().Add(RuleMatchedInfo);
+		}
+	}
+	return ScanResult;
 }
 
-FString UResScannerProxy::SerializeLiteResult()
-{
-	FString Result;
-	bool bRecordCommiter = GetScannerConfig()->GitChecker.bGitCheck && GetScannerConfig()->GitChecker.bRecordCommiter;
-	for(const auto& RuleMatchedInfo:MatchedResult.MatchedAssets)
-	{
-		Result += TEXT("-------------------------------------------\n");
-		if(RuleMatchedInfo.AssetPackageNames.Num() || RuleMatchedInfo.AssetsCommiter.Num())
-		{
-			FString Describle = RuleMatchedInfo.RuleDescribe.IsEmpty() ? TEXT(""):FString::Printf(TEXT("(%s)"),*RuleMatchedInfo.RuleDescribe);
-			Result += FString::Printf(TEXT("规则名: %s (%d) %s\n"),*RuleMatchedInfo.RuleName,RuleMatchedInfo.AssetPackageNames.Num(),*Describle);
-		}
-		
-		if(bRecordCommiter)
-		{
-			if(RuleMatchedInfo.AssetsCommiter.Num())
-			{
-				for(const auto& AssetCommiter:RuleMatchedInfo.AssetsCommiter)
-				{
-					Result += FString::Printf(TEXT("\t%s, %s\n"),*AssetCommiter.File,*AssetCommiter.Commiter);
-				}
-			}
-		}
-		else
-		{
-			if(RuleMatchedInfo.AssetPackageNames.Num())
-			{
-				for(const auto& AssetPackageName:RuleMatchedInfo.AssetPackageNames)
-				{
-					Result += FString::Printf(TEXT("\t%s\n"),*AssetPackageName);
-				}
-			}
-		}
-	}
-	Result += TEXT("-------------------------------------------\n");
-	return Result;
-}
+
 
 void UResScannerProxy::PostProcessorMatchRule(const FScannerMatchRule& Rule,const FRuleMatchedInfo& RuleMatchedInfo)
 {

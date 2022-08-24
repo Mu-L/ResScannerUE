@@ -226,22 +226,16 @@ bool UFlibAssetParseHelper::IsIgnoreAsset(const FAssetData& AssetData, const TAr
 	return bIsIgnored;
 }
 
-#define ENGINEDIR_MARK TEXT("[ENGINEDIR]")
-#define ENGINE_CONTENT_DIR_MARK TEXT("[ENGINE_CONTENT_DIR]")
-#define PROJECTDIR_MARK TEXT("[PROJECTDIR]")
-#define PROJECT_CONTENT_DIR_MARK TEXT("[PROJECT_CONTENT_DIR]")
-#define PROJECT_SAVED_DIR_MARK TEXT("[PROJECT_SAVED_DIR]")
-#define PROJECT_CONFIG_DIR_MARK TEXT("[PROJECT_CONFIG_DIR]")
 
 TMap<FString, FString> UFlibAssetParseHelper::GetReplacePathMarkMap()
 {
 	TMap<FString,FString> MarkMap;
-	MarkMap.Add(ENGINEDIR_MARK,FPaths::EngineDir());
-	MarkMap.Add(ENGINE_CONTENT_DIR_MARK,FPaths::EngineContentDir());
-	MarkMap.Add(PROJECTDIR_MARK,FPaths::ProjectDir());
-	MarkMap.Add(PROJECT_CONTENT_DIR_MARK,FPaths::ProjectContentDir());
-	MarkMap.Add(PROJECT_SAVED_DIR_MARK,FPaths::ProjectSavedDir());
-	MarkMap.Add(PROJECT_CONFIG_DIR_MARK,FPaths::ProjectConfigDir());
+	MarkMap.Add(SC_ENGINEDIR_MARK,FPaths::EngineDir());
+	MarkMap.Add(SC_ENGINE_CONTENT_DIR_MARK,FPaths::EngineContentDir());
+	MarkMap.Add(SC_PROJECTDIR_MARK,FPaths::ProjectDir());
+	MarkMap.Add(SC_PROJECT_CONTENT_DIR_MARK,FPaths::ProjectContentDir());
+	MarkMap.Add(SC_PROJECT_SAVED_DIR_MARK,FPaths::ProjectSavedDir());
+	MarkMap.Add(SC_PROJECT_CONFIG_DIR_MARK,FPaths::ProjectConfigDir());
 	return MarkMap;
 }
 
@@ -369,7 +363,7 @@ TArray<FSoftObjectPath> UFlibAssetParseHelper::GetAssetsByGitCommitHash(const FS
 void UFlibAssetParseHelper::CheckMatchedAssetsCommiter(FMatchedResult& MatchedResult, const FString& RepoDir)
 {
 	SCOPED_NAMED_EVENT_TEXT("UFlibAssetParseHelper::CheckMatchedAssetsCommiter",FColor::Red);
-	for(auto& MatchedInfo:MatchedResult.MatchedAssets)
+	for(auto& MatchedInfo:MatchedResult.GetMatchedInfo())
 	{
 		for(const auto& AssetPackageName:MatchedInfo.AssetPackageNames)
 		{
@@ -687,5 +681,3 @@ bool CustomMatchOperator::Match(const FAssetData& AssetData,const FScannerMatchR
 	}
 	return bIsMatched;
 }
-
-

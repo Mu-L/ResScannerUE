@@ -63,7 +63,7 @@ public class ResScannerEditor : ModuleRules
 		PublicDefinitions.AddRange(new string[]
 		{
 			"TOOL_NAME=\"ResScannerUE\"",
-			"CURRENT_VERSION_ID=25",
+			"CURRENT_VERSION_ID=26",
 			"REMOTE_VERSION_FILE=\"https://imzlp.com/opensource/version.json\""
 		});
 	}

@@ -177,8 +177,11 @@ enum class ERulePriority:uint8
 {
 	IMPORTENT UMETA(DisplayName="重要"),
 	GENERAL  UMETA(DisplayName="一般"),
-	LOW  UMETA(DisplayName="低")
+	LOW  UMETA(DisplayName="低"),
+	Max UMETA(Hidden)
 };
+
+ENUM_RANGE_BY_COUNT(ERulePriority,ERulePriority::Max);
 
 USTRUCT(BlueprintType)
 struct FFileCommiter
@@ -318,8 +321,6 @@ public:
 	// 当扫描完毕之后，对命中规则的资源进行处理
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,DisplayName="后处理规则",Category = "Filter",meta=(EditCondition="bEnablePostProcessor"))
 	TArray<TSubclassOf<UScannnerPostProcessorBase>> PostProcessors;
-
-	bool operator==(const FScannerMatchRule& R)const;
 	
 	bool HasValidRules()const { return (NameMatchRules.Rules.Num() || PathMatchRules.Rules.Num() || PropertyMatchRules.MatchRules.Num() || CustomRules.Num()); }
 };
@@ -347,11 +348,17 @@ public:
 	FString EndCommitHash = TEXT("HEAD");
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="检查待提交文件",Category="GitChecker",meta=(EditCondition="bGitCheck && !bDiffCommit"))
 	bool bUncommitFiles = false;
-	
-	// UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="记录文件的提交人",Category="GitChecker",meta=(EditCondition="bGitCheck"))
-	// bool bRecordCommmiter = false;
-	
+
 	FString GetRepoDir()const;
+};
+
+
+UENUM(BlueprintType)
+enum class EScanRulesType:uint8
+{
+	All UMETA(DisplayName="所有规则"),
+	RuleIDs UMETA(DisplayName="特定ID"),
+	Prioritys UMETA(DisplayName="特定优先级")
 };
 
 USTRUCT(BlueprintType)
@@ -382,18 +389,22 @@ public:
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="Git仓库扫描配置",Category="Global",meta=(EditCondition="bByGlobalScanFilters"))
 	FGitChecker GitChecker;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="开启规则白名单",Category="WhiteList")
-	bool bRuleWhiteList = false;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则白名单（名单中的规则才会被执行）",Category="WhiteList",meta=(EditCondition="bRuleWhiteList"))
+	
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="扫描规则类型",Category="Rules")
+	EScanRulesType ScanRulesType = EScanRulesType::All;
+	
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则白名单",Category="Rules",meta=(EditCondition="ScanRulesType==EScanRulesType::RuleIDs"))
 	TArray<int32> RuleWhileListIDs;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则黑名单（名单中的规则不被执行）",Category="BlockList")
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则黑名单",Category="Rules",meta=(EditCondition="ScanRulesType==EScanRulesType::RuleIDs"))
 	TArray<int32> RuleBlockListIDs;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="优先级列表",Category="Rules",meta=(EditCondition="ScanRulesType==EScanRulesType::Prioritys"))
+	TArray<ERulePriority> Prioritys;
 	
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="启用规则数据表",Category="RulesTable")
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="启用规则数据表",Category="Rules")
 	bool bUseRulesTable = false;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则数据表",Category="RulesTable", meta=(AllowedClasses="DataTable",RequiredAssetDataTags = "RowStructure=ScannerMatchRule",EditCondition="bUseRulesTable"))
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则数据表",Category="Rules", meta=(AllowedClasses="DataTable",RequiredAssetDataTags = "RowStructure=ScannerMatchRule",EditCondition="bUseRulesTable"))
 	FSoftObjectPath ImportRulesTable;
-	
+
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则列表",Category="Rules")
 	TArray<FScannerMatchRule> ScannerRules;
 	
@@ -409,15 +420,19 @@ public:
 	bool bStandaloneMode = true;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="关闭Shader编译",Category="Advanced")
 	bool bNoShaderCompile = true;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="输出详细日志",Category="Advanced")
+	bool bVerboseLog = true;
+	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Advanced")
 	FString AdditionalExecCommand;
-
+	
+	bool IsAllowRule(const FScannerMatchRule& Rule,int32 RuleID)const;
 	TArray<FScannerMatchRule> GetTableRules()const;
 	void HandleImportRulesTable();
 };
 
 USTRUCT(BlueprintType)
-struct FMatchedRuleAsset
+struct RESSCANNER_API FMatchedRuleAsset
 {
 	GENERATED_USTRUCT_BODY()
 public:
@@ -429,10 +444,18 @@ public:
 
 
 USTRUCT(BlueprintType)
-struct FMatchedResult
+struct RESSCANNER_API FMatchedResult
 {
 	GENERATED_USTRUCT_BODY()
 public:
+	void RecordGitCommiter(bool bRecordCommiter,const FString& RepoDir);
+	FString SerializeResult(bool Lite = false)const;
+	bool HasValidResult()const;
+	TArray<FRuleMatchedInfo>& GetMatchedInfo(){ return MatchedAssets; }
+	const TArray<FRuleMatchedInfo>& GetMatchedInfo()const { return MatchedAssets; }
+protected:
+	FString SerializeLiteResult()const;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	TArray<FRuleMatchedInfo> MatchedAssets;
+	bool bRecordCommiter = false;
 };

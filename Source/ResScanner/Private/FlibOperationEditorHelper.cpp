@@ -3,6 +3,7 @@
 
 #include "FlibOperationEditorHelper.h"
 
+#include "FlibAssetParseHelper.h"
 #include "Engine/TextureCube.h"
 #if WITH_EDITOR
 	#include "BlueprintEditorSettings.h"
@@ -13,6 +14,40 @@
 bool URule_CheckBlueprintError::Match_Implementation(UObject* Object, const FString& Asset)
 {
 	return UFlibOperationEditorHelper::BlueprintHasError(Object,false);
+}
+
+URule_IsAllowCommiterChecker::URule_IsAllowCommiterChecker(const FObjectInitializer& Initializer):Super(Initializer),RepoDir(SC_PROJECT_CONTENT_DIR_MARK)
+{
+}
+
+
+
+bool URule_IsAllowCommiterChecker::Match_Implementation(UObject* Object, const FString& AssetType)
+{
+	bool bIsAllow = true;
+	FString RepoRootDir = UFlibAssetParseHelper::ReplaceMarkPath(RepoDir);
+	
+	if(FPaths::DirectoryExists(RepoRootDir))
+	{
+		FString LongPackageName;
+		
+		if(UFlibAssetParseHelper::GetLongPackageNameByObject(Object,LongPackageName))
+		{
+			FFileCommiter FileCommiter;
+			bool bGetStatus = UFlibAssetParseHelper::GetLocalEditorByLongPackageName(RepoDir,LongPackageName,FileCommiter);
+     
+			if(!bGetStatus)
+			{
+				bGetStatus = UFlibAssetParseHelper::GetGitCommiterByLongPackageName(RepoDir,LongPackageName,FileCommiter);
+			}
+     
+			if(bGetStatus)
+			{
+				bIsAllow = AllowCommiters.Contains(FileCommiter.Commiter);
+			}
+		}
+	}
+	return !bIsAllow;
 }
 
 bool UFlibOperationEditorHelper::CompileBlueprint(UObject* Blueprint, int32& OutNumError, int32& OutNumWarning)
@@ -69,4 +104,23 @@ FVector2D UFlibOperationEditorHelper::GetTextureCubeSize(UTextureCube* TextureCu
 		result.Y = TextureCube->GetSizeY();
 	}
 	return result;
+}
+
+bool UFlibOperationEditorHelper::IsAllowCommiterChanged(const FString& LongPackageName, const FString& RepoDir,
+	const TArray<FString>& AllowCommiter)
+{
+	bool bIsAllow = true;
+	FFileCommiter FileCommiter;
+	bool bGetStatus = UFlibAssetParseHelper::GetLocalEditorByLongPackageName(RepoDir,LongPackageName,FileCommiter);
+
+	if(!bGetStatus)
+	{
+		bGetStatus = UFlibAssetParseHelper::GetGitCommiterByLongPackageName(RepoDir,LongPackageName,FileCommiter);
+	}
+
+	if(bGetStatus)
+	{
+		bIsAllow = AllowCommiter.Contains(FileCommiter.Commiter);
+	}
+	return bIsAllow;
 }

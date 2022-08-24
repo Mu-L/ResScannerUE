@@ -65,12 +65,12 @@ void SResScanner::Construct(const FArguments& InArgs)
 					[
 					SNew(STextBlock)
 					.Font(FCoreStyle::GetDefaultFontStyle("Scanner", 15))
-					.Text(LOCTEXT("ResScannerSectionHeader", "Res Scanner"))
+					.Text(LOCTEXT("ResScannerSectionHeader", "ResScanner"))
 					]
 					+ SGridPanel::Slot(1, 0)
 					.Padding(8.0f, 0.0f, 8.0f, 0.0f)
 					[
-					SNew(SResScannerConfigPage)
+						SNew(SResScannerConfigPage)
 					]
 				]
 

@@ -123,12 +123,12 @@ int32 UResScannerCommandlet::Main(const FString& Params)
 		ScannerProxy->AddToRoot();
 		ScannerProxy->SetScannerConfig(ScannerConfig);
 		ScannerProxy->Init();
-		ScannerProxy->DoScan();
-		const FMatchedResult& Result = ScannerProxy->GetScanResult();
-		FString OutString = ScannerProxy->SerializeResult();
+		
+		const FMatchedResult& Result = ScannerProxy->DoScan();;
+		FString OutString = Result.SerializeResult(false);
 		
 		UE_LOG(LogResScannerCommandlet, Display, TEXT("\nAsset Scan Result:\n%s"), *OutString);
-		if(Result.MatchedAssets.Num())
+		if(Result.HasValidResult())
 		{
 			iProcessResult = -1;
 		}

@@ -185,9 +185,9 @@ void SResScannerConfigPage::DoScanWork()const
 		ScannerProxy->AddToRoot();
 		ScannerProxy->SetScannerConfig(*ScannerConfig);
 		ScannerProxy->Init();
-		ScannerProxy->DoScan();
-		const FMatchedResult& Result = ScannerProxy->GetScanResult();
-		FString OutString = ScannerProxy->SerializeResult();
+		
+		const FMatchedResult& Result = ScannerProxy->DoScan();;
+		FString OutString = Result.SerializeResult(ScannerProxy->GetScannerConfig()->bSavaeLiteResult);
 		ContentsWidget->SetContent(OutString);
 		ContentsWidget->SetExpanded(true);
 		ContentsWidget->SetVisibility(EVisibility::Visible);

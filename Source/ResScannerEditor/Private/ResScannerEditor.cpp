@@ -8,13 +8,43 @@
 	#define InvokeTab TryInvokeTab
 #endif
 #include "EditorModeRegistry.h"
+#include "Misc/FileHelper.h"
+#include "ISettingsModule.h"
+#include "ResScannerEditorSettings.h"
+#include "ResScannerProxy.h"
 #include "SResScanner.h"
 #include "DetailCustomization/CustomPropertyMatchMappingDetails.h"
+#include "Kismet/KismetStringLibrary.h"
+#include "Kismet/KismetTextLibrary.h"
 #include "SVersionUpdater/VersionUpdaterStyle.h"
 
 static const FName ResScannerTabName("ResScanner");
 
 #define LOCTEXT_NAMESPACE "FResScannerEditorModule"
+
+DEFINE_LOG_CATEGORY(LogResScannerEditor);
+
+
+FString LongPackageNameToPackagePath(const FString& InLongPackageName)
+{
+	SCOPED_NAMED_EVENT_TEXT("LongPackageNameToPackagePath",FColor::Red);
+	if(InLongPackageName.Contains(TEXT(".")))
+	{
+		return InLongPackageName;
+	}
+	FString AssetName;
+	{
+		int32 FoundIndex;
+		InLongPackageName.FindLastChar('/', FoundIndex);
+		if (FoundIndex != INDEX_NONE)
+		{
+			AssetName = UKismetStringLibrary::GetSubstring(InLongPackageName, FoundIndex + 1, InLongPackageName.Len() - FoundIndex);
+		}
+	}
+	FString OutPackagePath = InLongPackageName + TEXT(".") + AssetName;
+	return OutPackagePath;
+}
+
 
 void UResScannerRegister::OpenResScannerEditor()
 {
@@ -71,14 +101,83 @@ void FResScannerEditorModule::StartupModule()
 
 	MissionNotifyProay = NewObject<UScannerNotificationProxy>();
 	MissionNotifyProay->AddToRoot();
+
+	CreateExtensionSettings();
+
+	ScannerProxy = NewObject<UResScannerProxy>();
+	ScannerProxy->AddToRoot();
+	ScannerProxy->Init();
+	
+	ScannerProxy->SetScannerConfig(GetDefault<UResScannerEditorSettings>()->EditorScannerConfig);
+
+	UPackage::PackageSavedEvent.AddRaw(this,&FResScannerEditorModule::PackageSaved);
+
+	const UResScannerEditorSettings* EditorSetting = GetDefault<UResScannerEditorSettings>();
+	if(::IsRunningCommandlet() && EditorSetting->bEnableCookingCheck)
+	{
+		ScannerPackageTracker = MakeShareable(new FScannerPackageTracker);
+		FCoreDelegates::OnEnginePreExit.AddRaw(this,&FResScannerEditorModule::OnEnginePreExit);
+	}
 }
 
 void FResScannerEditorModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
+
 }
 
+void FResScannerEditorModule::OnEnginePreExit()
+{
+	const UResScannerEditorSettings* EditorSetting = GetDefault<UResScannerEditorSettings>();
+    if(::IsRunningCommandlet() && EditorSetting->bEnableCookingCheck && ScannerPackageTracker.IsValid())
+    {
+    	UResScannerProxy* CookingScannerProxy = NewObject<UResScannerProxy>();
+    	CookingScannerProxy->SetScannerConfig(GetDefault<UResScannerEditorSettings>()->CookingScannerConfig);
+    	CookingScannerProxy->Init();
+    		
+    	TArray<FAssetData> LoadedPackageDatas;
+    
+    	for(const auto& PackageName:ScannerPackageTracker->GetLoadedPackageNames())
+    	{
+    		FSoftObjectPath ObjectPath(LongPackageNameToPackagePath(PackageName.ToString()));
+    		FAssetData AssetData;
+    		if(UAssetManager::Get().GetAssetDataForPath(ObjectPath,AssetData))
+    		{
+    			LoadedPackageDatas.AddUnique(AssetData);
+    		}
+    	}	
+    	const auto& ScanResult = ScannerProxy->ScanAssets(LoadedPackageDatas);
+    
+    	if(ScanResult.HasValidResult())
+    	{
+    		FString ScanResultStr = ScanResult.SerializeResult(true);
+    		TSharedPtr<FScannerConfig> Config = CookingScannerProxy->GetScannerConfig();
+    		FString ConfigName = FString::Printf(TEXT("%s.txt"),*Config->ConfigName);
+    		FString SaveTo = UFlibAssetParseHelper::ReplaceMarkPath(FPaths::Combine(Config->SavePath.Path,ConfigName));
+    		if(FFileHelper::SaveStringToFile(ScanResultStr,*SaveTo,FFileHelper::EEncodingOptions::ForceUTF8))
+    		{
+    			UE_LOG(LogResScannerEditor,Display,TEXT("Saveing %s Scanner result to %s.\n%s"),*Config->ConfigName,*SaveTo,*ScanResultStr);
+    		}
+    	}
+    	
+    	ScannerPackageTracker = nullptr;
+    }
+}
+
+void FResScannerEditorModule::CreateExtensionSettings()
+{
+	ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings");
+	if (SettingsModule != nullptr)
+	{
+		// ClassViewer Editor Settings
+		SettingsModule->RegisterSettings("Project", "Game", "ResScannerSettings",
+										LOCTEXT("ResScannerSettingsDisplayName", "Res Scanner Settings"),
+										LOCTEXT("ResScannerSettingsDescription", "Res Scanner Settings."),
+										GetMutableDefault<UResScannerEditorSettings>()
+		);
+	}
+}
 void FResScannerEditorModule::AddMenuExtension(FMenuBuilder& Builder)
 {
 	Builder.AddMenuEntry(FResScannerCommands::Get().PluginAction);
@@ -119,7 +218,6 @@ void FResScannerEditorModule::OnTabClosed(TSharedRef<SDockTab> InTab)
 	DockTab.Reset();
 }
 
-
 void FResScannerEditorModule::RunProcMission(const FString& Bin, const FString& Command, const FString& MissionName)
 {
 	if (mProcWorkingThread.IsValid() && mProcWorkingThread->GetThreadStatus()==EThreadStatus::Busy)
@@ -149,6 +247,33 @@ void FResScannerEditorModule::RunProcMission(const FString& Bin, const FString& 
 		});
 		
 		mProcWorkingThread->Execute();
+	}
+}
+
+void FResScannerEditorModule::PackageSaved(const FString& PacStr,UObject* PackageSaved)
+{
+	bool bEnable = GetDefault<UResScannerEditorSettings>()->bEnableEditorCheck;
+	if(bEnable)
+	{
+		static UResScannerEditorSettings* ResScannerEditorSettings = GetMutableDefault<UResScannerEditorSettings>();
+		ScannerProxy->SetScannerConfig(ResScannerEditorSettings->EditorScannerConfig);
+
+		FString PackageName = LongPackageNameToPackagePath(FPackageName::FilenameToLongPackageName(PacStr));
+		FSoftObjectPath ObjectPath(PackageName);
+		FAssetData AssetData;
+		if(UAssetManager::Get().GetAssetDataForPath(ObjectPath,AssetData))
+		{
+			const auto& ScanResult = ScannerProxy->ScanAssets(TArray<FAssetData>{AssetData});
+
+			if(ScanResult.HasValidResult())
+			{
+				FString ScanResultStr = ScanResult.SerializeResult(true);
+				UE_LOG(LogResScannerEditor,Warning,TEXT("\n%s"),*ScanResultStr);
+				FText DialogText = UKismetTextLibrary::Conv_StringToText(ScanResultStr);
+				FText DialogTitle = UKismetTextLibrary::Conv_StringToText(TEXT("ResScanner Message"));
+				FMessageDialog::Open(EAppMsgType::Ok, DialogText,&DialogTitle);
+			}
+		}
 	}
 }
 

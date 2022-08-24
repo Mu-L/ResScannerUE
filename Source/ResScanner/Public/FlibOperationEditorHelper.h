@@ -16,6 +16,23 @@ public:
 	virtual bool Match_Implementation(UObject* Object,const FString& AssetType) override;
 };
 
+
+UCLASS()
+class URule_IsAllowCommiterChecker:public UOperatorBase
+{
+	GENERATED_BODY()
+public:
+	URule_IsAllowCommiterChecker(const FObjectInitializer& Initializer);
+	
+	virtual bool Match_Implementation(UObject* Object,const FString& AssetType) override;
+protected:
+	// [PROJECT_CONTENT_DIR] or [PROJECT_DIR]
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	FString RepoDir;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	TArray<FString> AllowCommiters;
+};
+
 /**
  * 
  */
@@ -31,4 +48,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable,BlueprintPure)
 	static FVector2D GetTextureCubeSize(UTextureCube* TextureCube);
+
+	UFUNCTION(BlueprintCallable,BlueprintPure)
+	static bool IsAllowCommiterChanged(const FString& LongPackageName,const FString& RepoDir,const TArray<FString>& AllowCommiter);
 };
