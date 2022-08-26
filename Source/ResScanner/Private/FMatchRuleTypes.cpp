@@ -57,10 +57,6 @@ TArray<FScannerMatchRule> FScannerConfig::GetTableRules() const
 			for (auto& name : RowNames)
 			{
 				FScannerMatchRule* pRow = RulesTable->FindRow<FScannerMatchRule>(name, ContextString);
-				if(bVerboseLog)
-				{
-					UE_LOG(LogResScannerProxy,Display,TEXT("FindRow %s %s."), *name.ToString(),pRow ? TEXT("TRUE"): TEXT("FALSE"));
-				}
 				if(pRow && pRow->HasValidRules())
 				{
 					result.Add(*pRow);

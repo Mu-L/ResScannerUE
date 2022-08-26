@@ -25,6 +25,7 @@ public:
 	URule_IsAllowCommiterChecker(const FObjectInitializer& Initializer);
 	
 	virtual bool Match_Implementation(UObject* Object,const FString& AssetType) override;
+	virtual bool MatchFast_Implementation(const FString& LongPackagePath,const FString& AssetType) override;
 protected:
 	// [PROJECT_CONTENT_DIR] or [PROJECT_DIR]
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)

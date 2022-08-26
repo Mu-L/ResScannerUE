@@ -1,5 +1,5 @@
 #include "ResScannerProxy.h"
-
+#include "ScanTimeRecorder.h"
 #include "FlibSourceControlHelper.h"
 #include "Misc/FileHelper.h"
 
@@ -25,6 +25,8 @@ void UResScannerProxy::Shutdown()
 
 FRuleMatchedInfo UResScannerProxy::ScanSingleRule(const TArray<FAssetData>& GlobalAssets,const FScannerMatchRule& ScannerRule,int32 RuleID/* = 0*/)
 {
+	FScanTimeRecorder RuleTimeRecorder(ScannerRule.RuleName);
+	
 	FScopedNamedEventStatic ScanSingleRule(FColor::Red,*ScannerRule.RuleName);
 	FRuleMatchedInfo RuleMatchedInfo;
 	// FScannerMatchRule& ScannerRule = GetScannerConfig()->ScannerRules[RuleID];
@@ -204,6 +206,7 @@ void UResScannerProxy::SetScannerConfig(FScannerConfig InConfig)
 
 FMatchedResult UResScannerProxy::ScanAssets(const TArray<FAssetData>& Assets)
 {
+	FScanTimeRecorder ScanAssetsTimeRecorder(FString::Printf(TEXT("ScanAssets %d."),Assets.Num()));
 	UE_LOG(LogResScannerProxy,Display,TEXT("Asset Scanning"));
 	
 	FMatchedResult ScanResult;

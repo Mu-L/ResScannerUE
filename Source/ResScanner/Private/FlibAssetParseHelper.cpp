@@ -667,7 +667,16 @@ bool CustomMatchOperator::Match(const FAssetData& AssetData,const FScannerMatchR
 			UOperatorBase* Operator = Cast<UOperatorBase>(ExOperator->GetDefaultObject());
 			if(Operator)
 			{
-				bIsMatched = Operator->Match(AssetData.GetAsset(),AssetData.AssetClass.ToString());
+				FString AssetType = AssetData.AssetClass.ToString();
+				if(Operator->IsFastMatch())
+				{
+					bIsMatched = Operator->MatchFast(AssetData.PackageName.ToString(),AssetType);
+				}
+				else
+				{
+					bIsMatched = Operator->Match(AssetData.GetAsset(),AssetType);
+				}
+				
 				if(!bIsMatched && Operator->GetMatchLogic() == EMatchLogic::Necessary)
 				{
 					break;

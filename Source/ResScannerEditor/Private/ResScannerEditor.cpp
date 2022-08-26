@@ -13,6 +13,7 @@
 #include "ISettingsModule.h"
 #include "ResScannerEditorSettings.h"
 #include "ResScannerProxy.h"
+#include "ScanTimeRecorder.h"
 #include "SResScanner.h"
 #include "Async/ParallelFor.h"
 #include "DetailCustomization/CustomPropertyMatchMappingDetails.h"
@@ -170,6 +171,7 @@ void FResScannerEditorModule::ShutdownModule()
 
 void FResScannerEditorModule::OnEnginePreExit()
 {
+	
 	UE_LOG(LogResScannerEditor,Display,TEXT("OnEnginePreExit"));
 	
 	const UResScannerEditorSettings* EditorSetting = GetDefault<UResScannerEditorSettings>();
@@ -182,21 +184,23 @@ void FResScannerEditorModule::OnEnginePreExit()
     	CookingScannerProxy->AddToRoot();
     	
     	TArray<FAssetData> LoadedPackageDatas;
-    	
-    	TArray<FName> LoadedPackageNames = ScannerPackageTracker->GetLoadedPackageNames().Array();
-    	ParallelFor(LoadedPackageNames.Num(),[&](int32 index)
-		{
-    		FName PackageName = LoadedPackageNames[index];
-    		FSoftObjectPath ObjectPath(LongPackageNameToPackagePath(PackageName.ToString()));
-			FAssetData AssetData;
-			if(UAssetManager::Get().GetAssetDataForPath(ObjectPath,AssetData))
-			{
-				LoadedPackageDatas.AddUnique(AssetData);
-			}
-		},true,false);
-		
-    	UE_LOG(LogResScannerEditor,Display,TEXT("Tracking Load Asset Num: %d"),LoadedPackageDatas.Num());
 
+	    {
+    		FScanTimeRecorder LoadPackagesAssetRegistryData(TEXT("Get All Scann Asset AssetRegistry Data."));
+		    TArray<FName> LoadedPackageNames = ScannerPackageTracker->GetLoadedPackageNames().Array();
+    		ParallelFor(LoadedPackageNames.Num(),[&](int32 index)
+			{
+				FName PackageName = LoadedPackageNames[index];
+				FSoftObjectPath ObjectPath(LongPackageNameToPackagePath(PackageName.ToString()));
+				FAssetData AssetData;
+				if(UAssetManager::Get().GetAssetDataForPath(ObjectPath,AssetData))
+				{
+					LoadedPackageDatas.AddUnique(AssetData);
+				}
+			},true,false);
+		
+    		UE_LOG(LogResScannerEditor,Display,TEXT("Tracking Load Asset Num: %d"),LoadedPackageDatas.Num());
+	    }
     	FString CookingConfigJsonStr;
     	TemplateHelper::TSerializeStructAsJsonString(CookingConfig,CookingConfigJsonStr);
     	UE_LOG(LogResScannerEditor,Display,TEXT("\n%s\n"),*CookingConfigJsonStr);

@@ -253,11 +253,19 @@ public:
 	UFUNCTION(BlueprintNativeEvent,BlueprintCallable)
 	bool Match(UObject* Object,const FString& AssetType);
 	UFUNCTION(BlueprintNativeEvent,BlueprintCallable)
+	bool MatchFast(const FString& LongPackagePath,const FString& AssetType);
+	UFUNCTION(BlueprintNativeEvent,BlueprintCallable)
 	EMatchLogic GetMatchLogic()const;
 
 	virtual bool Match_Implementation(UObject* Object,const FString& AssetType){ return false; }
+	virtual bool MatchFast_Implementation(const FString& LongPackagePath,const FString& AssetType){ return false; }
 	virtual EMatchLogic GetMatchLogic_Implementation()const { return EMatchLogic::Necessary; };
+
+	bool IsFastMatch()const { return bFastMatch; }
 protected:
+	// do not load asset,will be call MatchFast just pass LongPackageName
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	bool bFastMatch = false;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	EMatchLogic MatchLogic;
 };

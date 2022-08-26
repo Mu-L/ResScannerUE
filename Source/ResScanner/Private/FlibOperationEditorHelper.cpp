@@ -18,33 +18,39 @@ bool URule_CheckBlueprintError::Match_Implementation(UObject* Object, const FStr
 
 URule_IsAllowCommiterChecker::URule_IsAllowCommiterChecker(const FObjectInitializer& Initializer):Super(Initializer),RepoDir(SC_PROJECT_CONTENT_DIR_MARK)
 {
+	bFastMatch = true;
 }
-
-
 
 bool URule_IsAllowCommiterChecker::Match_Implementation(UObject* Object, const FString& AssetType)
 {
 	bool bIsAllow = true;
+	FString LongPackageName;
+		
+	if(UFlibAssetParseHelper::GetLongPackageNameByObject(Object,LongPackageName))
+	{
+		bIsAllow = MatchFast(LongPackageName,AssetType);
+	}
+	return !bIsAllow;
+}
+
+bool URule_IsAllowCommiterChecker::MatchFast_Implementation(const FString& LongPackageName, const FString& AssetType)
+{
+	bool bIsAllow = true;
 	FString RepoRootDir = UFlibAssetParseHelper::ReplaceMarkPath(RepoDir);
 	
-	if(FPaths::DirectoryExists(RepoRootDir))
+	if(FPaths::DirectoryExists(RepoRootDir) && FPackageName::DoesPackageExist(LongPackageName))
 	{
-		FString LongPackageName;
-		
-		if(UFlibAssetParseHelper::GetLongPackageNameByObject(Object,LongPackageName))
+		FFileCommiter FileCommiter;
+		bool bGetStatus = UFlibAssetParseHelper::GetLocalEditorByLongPackageName(RepoDir,LongPackageName,FileCommiter);
+     
+		if(!bGetStatus)
 		{
-			FFileCommiter FileCommiter;
-			bool bGetStatus = UFlibAssetParseHelper::GetLocalEditorByLongPackageName(RepoDir,LongPackageName,FileCommiter);
+			bGetStatus = UFlibAssetParseHelper::GetGitCommiterByLongPackageName(RepoDir,LongPackageName,FileCommiter);
+		}
      
-			if(!bGetStatus)
-			{
-				bGetStatus = UFlibAssetParseHelper::GetGitCommiterByLongPackageName(RepoDir,LongPackageName,FileCommiter);
-			}
-     
-			if(bGetStatus)
-			{
-				bIsAllow = AllowCommiters.Contains(FileCommiter.Commiter);
-			}
+		if(bGetStatus)
+		{
+			bIsAllow = AllowCommiters.Contains(FileCommiter.Commiter);
 		}
 	}
 	return !bIsAllow;
