@@ -1,5 +1,6 @@
 #include "FMatchRuleTypes.h"
 #include "FlibAssetParseHelper.h"
+#include "ResScannerProxy.h"
 
 FString FGitChecker::GetRepoDir() const
 {
@@ -20,15 +21,18 @@ bool FScannerConfig::IsAllowRule(const FScannerMatchRule& Rule, int32 RuleID) co
 				bIsAllow = true;
 				break;
 		}
-		case EScanRulesType::RuleIDs: {
-				bool bCheck = RuleWhileListIDs.Num() ? RuleWhileListIDs.Contains(RuleID) : true;
-				bCheck = RuleBlockListIDs.Contains(RuleID) ? false : bCheck;
-				bIsAllow = bCheck;
-				break;
-		}
 		case EScanRulesType::Prioritys: {
 				bIsAllow = Prioritys.Contains(Rule.Priority);
 				break;
+		}
+		case EScanRulesType::WhiteList: {
+					bIsAllow = RuleWhileListIDs.Num() ? RuleWhileListIDs.Contains(RuleID) : true;
+					
+					break;
+		}
+		case EScanRulesType::BlockList: {
+					bIsAllow = RuleBlockListIDs.Contains(RuleID) ? false : true;
+					break;
 		}
 	}
 	return bIsAllow;
@@ -43,13 +47,33 @@ TArray<FScannerMatchRule> FScannerConfig::GetTableRules() const
 		if(RulesTable)
 		{
 			TArray<FName> RowNames = RulesTable->GetRowNames();
+
+			if(bVerboseLog)
+			{
+				UE_LOG(LogResScannerProxy,Display,TEXT("Loaded DataTable RowNames: %d"),RowNames.Num());
+			}
+			
 			FString ContextString;
 			for (auto& name : RowNames)
 			{
 				FScannerMatchRule* pRow = RulesTable->FindRow<FScannerMatchRule>(name, ContextString);
-				result.Add(*pRow);
+				if(bVerboseLog)
+				{
+					UE_LOG(LogResScannerProxy,Display,TEXT("FindRow %s %s."), *name.ToString(),pRow ? TEXT("TRUE"): TEXT("FALSE"));
+				}
+				if(pRow && pRow->HasValidRules())
+				{
+					result.Add(*pRow);
+				}
 			}
+		} else if(bVerboseLog)
+		{
+			UE_LOG(LogResScannerProxy,Display,TEXT("Load %s as DataTable is Failed!"),*ImportRulesTable.GetLongPackageName());
 		}
+	}
+	else if(bVerboseLog)
+	{
+		UE_LOG(LogResScannerProxy,Display,TEXT("ImportRulesTable is invalid!"));
 	}
 	
 	return result;

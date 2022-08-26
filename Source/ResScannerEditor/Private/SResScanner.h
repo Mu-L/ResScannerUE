@@ -2,10 +2,13 @@
 
 #include "ResScannerEditor.h"
 #include "CoreMinimal.h"
+#include "FMatchRuleTypes.h"
 #include "IDetailsView.h"
 #include "Widgets/DeclarativeSyntaxSupport.h"
 #include "Input/Reply.h"
 #include "Widgets/SCompoundWidget.h"
+
+
 class SResScanner : public SCompoundWidget
 {
 

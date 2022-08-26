@@ -88,11 +88,10 @@ FRuleMatchedInfo UResScannerProxy::ScanSingleRule(const TArray<FAssetData>& Glob
 				RuleMatchedInfo.Assets.AddUnique(Asset);
 				RuleMatchedInfo.AssetPackageNames.AddUnique(Asset.PackageName.ToString());
 			}
-			if(GetScannerConfig()->bVerboseLog)
+			if(GetScannerConfig()->bVerboseLog && bMatchAllRules)
 			{
-				UE_LOG(LogResScannerProxy,Display,TEXT("\t%s match status is %s!"),*Asset.GetFullName(),bMatchAllRules ? TEXT("TRUE"):TEXT("FALSE"));
+				UE_LOG(LogResScannerProxy,Display,TEXT("\t%s"),*Asset.GetFullName());
 			}
-			
 		}
 	}
 	
@@ -205,22 +204,26 @@ void UResScannerProxy::SetScannerConfig(FScannerConfig InConfig)
 
 FMatchedResult UResScannerProxy::ScanAssets(const TArray<FAssetData>& Assets)
 {
-
+	UE_LOG(LogResScannerProxy,Display,TEXT("Asset Scanning"));
+	
 	FMatchedResult ScanResult;
 	auto ScanAssetByRule = [this](const TArray<FAssetData>& Assets,const FScannerMatchRule& Rule,int32 RuleID,FRuleMatchedInfo& OutResult)->bool
 	{
 		bool bResult = false;
-		if(GetScannerConfig()->IsAllowRule(Rule,RuleID))
+		bool bIsAllowRule = GetScannerConfig()->IsAllowRule(Rule,RuleID);
+		if(bIsAllowRule)
 		{
 			OutResult = ScanSingleRule(Assets,Rule,RuleID);
 			bResult = !!OutResult.Assets.Num();
 		}
+		UE_LOG(LogResScannerProxy,Display,TEXT("Rule \"%s\" is %s!"),*Rule.RuleName,bIsAllowRule ? TEXT("enabled"):TEXT("disabled"));
 		return bResult;
 	};
 	
 	if(GetScannerConfig()->bUseRulesTable)
 	{
 		TArray<FScannerMatchRule> ImportRules = GetScannerConfig()->GetTableRules();
+		UE_LOG(LogResScannerProxy,Display,TEXT("Total Rules: %d!"),ImportRules.Num());
 		
 		for(int32 RuleID = 0;RuleID < ImportRules.Num();++RuleID)
 		{
@@ -230,6 +233,7 @@ FMatchedResult UResScannerProxy::ScanAssets(const TArray<FAssetData>& Assets)
 			{
 				ScanResult.GetMatchedInfo().Add(RuleMatchedInfo);
 			}
+			
 		}
 	}
 	

@@ -48,7 +48,8 @@ public class ResScannerEditor : ModuleRules
 				"UnrealEd",
 				"EditorStyle",
 				"InputCore",
-				"HTTP"
+				"HTTP",
+				"UnrealEd"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

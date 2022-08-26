@@ -7,10 +7,34 @@
 #include "Modules/ModuleManager.h"
 #include "ThreadUtils/FProcWorkerThread.hpp"
 #include "FScannerPackageTracker.h"
+#include "DataTableEditorUtils.h"
+#include "FMatchRuleTypes.h"
+#include "Kismet2/ListenerManager.h"
+#include "Kismet2/StructureEditorUtils.h"
 #include "ResScannerEditor.generated.h"
 
 
 DECLARE_LOG_CATEGORY_EXTERN(LogResScannerEditor,All,All);
+
+
+
+class FScannerDataTableListener:
+	public FNotifyHook,
+	public FStructureEditorUtils::INotifyOnStructChanged,
+	public FDataTableEditorUtils::INotifyOnDataTableChanged
+{
+	// FNotifyHook
+	virtual void NotifyPreChange( FProperty* PropertyAboutToChange ) override{}
+	virtual void NotifyPostChange( const FPropertyChangedEvent& PropertyChangedEvent, FProperty* PropertyThatChanged ) override{}
+
+	// INotifyOnStructChanged
+	virtual void PreChange(const class UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info) override{}
+	virtual void PostChange(const class UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info) override{}
+	
+	// INotifyOnDataTableChanged
+	virtual void PreChange(const UDataTable* Changed, FDataTableEditorUtils::EDataTableChangeInfo Info) override{}
+	virtual void PostChange(const UDataTable* Changed, FDataTableEditorUtils::EDataTableChangeInfo Info) override;
+};
 
 UCLASS()
 class RESSCANNEREDITOR_API UResScannerRegister : public UObject
@@ -46,4 +70,5 @@ private:
 	TSharedPtr<SDockTab> DockTab;
 
 	TSharedPtr<FScannerPackageTracker> ScannerPackageTracker;
+	TSharedPtr<FScannerDataTableListener> ScannerDataTableListener;
 };

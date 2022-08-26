@@ -57,26 +57,29 @@ bool UFlibOperationEditorHelper::CompileBlueprint(UObject* Blueprint, int32& Out
 	if(Blueprint)
 	{
 		UBlueprint* BlueprintIns = Cast<UBlueprint>(Blueprint);
-		FCompilerResultsLog LogResults;
-		LogResults.SetSourcePath(BlueprintIns->GetPathName());
-		LogResults.BeginEvent(TEXT("Compile"));
-		LogResults.bLogDetailedResults = GetDefault<UBlueprintEditorSettings>()->bShowDetailedCompileResults;
-		LogResults.EventDisplayThresholdMs = GetDefault<UBlueprintEditorSettings>()->CompileEventDisplayThresholdMs;
-		EBlueprintCompileOptions CompileOptions = EBlueprintCompileOptions::BatchCompile | EBlueprintCompileOptions::SkipSave;
-		bool bSaveIntermediateBuildProducts = true;
-		if( bSaveIntermediateBuildProducts )
+		if(BlueprintIns)
 		{
-			CompileOptions |= EBlueprintCompileOptions::SaveIntermediateProducts;
-		}
-		FKismetEditorUtilities::CompileBlueprint(BlueprintIns, CompileOptions, &LogResults);
+			FCompilerResultsLog LogResults;
+			LogResults.SetSourcePath(BlueprintIns->GetPathName());
+			LogResults.BeginEvent(TEXT("Compile"));
+			LogResults.bLogDetailedResults = GetDefault<UBlueprintEditorSettings>()->bShowDetailedCompileResults;
+			LogResults.EventDisplayThresholdMs = GetDefault<UBlueprintEditorSettings>()->CompileEventDisplayThresholdMs;
+			EBlueprintCompileOptions CompileOptions = EBlueprintCompileOptions::BatchCompile | EBlueprintCompileOptions::SkipSave;
+			bool bSaveIntermediateBuildProducts = true;
+			if( bSaveIntermediateBuildProducts )
+			{
+				CompileOptions |= EBlueprintCompileOptions::SaveIntermediateProducts;
+			}
+			FKismetEditorUtilities::CompileBlueprint(BlueprintIns, CompileOptions, &LogResults);
 
-		LogResults.EndEvent();
-		OutNumError = LogResults.NumErrors;
-		OutNumWarning = LogResults.NumWarnings;
+			LogResults.EndEvent();
+			OutNumError = LogResults.NumErrors;
+			OutNumWarning = LogResults.NumWarnings;
 		
-		if(BlueprintIns->Status == EBlueprintStatus::BS_Error)
-		{
-			bBlueprintHasError = true;
+			if(BlueprintIns->Status == EBlueprintStatus::BS_Error)
+			{
+				bBlueprintHasError = true;
+			}
 		}
 	}
 
@@ -88,8 +91,12 @@ bool UFlibOperationEditorHelper::BlueprintHasError(UObject* Blueprint,bool bWarn
 {
 	int32 OutNumError = 0;
 	int32 OutNumWarning = 0;
-	
-	bool bHasError = UFlibOperationEditorHelper::CompileBlueprint(Blueprint,OutNumError,OutNumWarning);
+	bool bHasError = false;
+	UBlueprint* BlueprintIns = Cast<UBlueprint>(Blueprint);
+	if(BlueprintIns)
+	{
+		bHasError = UFlibOperationEditorHelper::CompileBlueprint(BlueprintIns,OutNumError,OutNumWarning);
+	}
 	
 	bool bRetHasError = bWarningAsError ? (bHasError || OutNumWarning > 0) : bHasError;
 	return bRetHasError;

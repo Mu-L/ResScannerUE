@@ -7,12 +7,14 @@
 #if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION>=26
 	#define InvokeTab TryInvokeTab
 #endif
+#include "DataTableEditorUtils.h"
 #include "EditorModeRegistry.h"
 #include "Misc/FileHelper.h"
 #include "ISettingsModule.h"
 #include "ResScannerEditorSettings.h"
 #include "ResScannerProxy.h"
 #include "SResScanner.h"
+#include "Async/ParallelFor.h"
 #include "DetailCustomization/CustomPropertyMatchMappingDetails.h"
 #include "Kismet/KismetStringLibrary.h"
 #include "Kismet/KismetTextLibrary.h"
@@ -45,6 +47,29 @@ FString LongPackageNameToPackagePath(const FString& InLongPackageName)
 	return OutPackagePath;
 }
 
+void FScannerDataTableListener::PostChange(const UDataTable* Changed, FDataTableEditorUtils::EDataTableChangeInfo Info)
+{
+	if(Changed && Changed->RowStruct == FScannerMatchRule::StaticStruct() && Info == FDataTableEditorUtils::EDataTableChangeInfo::RowList)
+	{
+		TArray<FName> RowNames = Changed->GetRowNames();
+		FString ContextString;
+		
+		for (int32 index = 0;index < RowNames.Num(); ++index)
+		{
+			FName name = RowNames[index];
+			FScannerMatchRule* pRow = Changed->FindRow<FScannerMatchRule>(name, ContextString);
+			if(pRow)
+			{
+				uint8* RawData = *Changed->GetRowMap().Find(name);
+				FName NewName = *FString::Printf(TEXT("%d"),index);
+				if(NewName != name && !NewName.IsNone() && !RowNames.Contains(NewName))
+				{
+					FDataTableEditorUtils::RenameRow((UDataTable*)Changed,name,NewName);
+				}
+			}
+		}
+	}
+}
 
 void UResScannerRegister::OpenResScannerEditor()
 {
@@ -60,6 +85,7 @@ FResScannerEditorModule& FResScannerEditorModule::Get()
 
 void FResScannerEditorModule::StartupModule()
 {
+	UE_LOG(LogResScannerEditor,Display,TEXT("ResScannerEditorModule StartupModule"));
 	if(IsRunningCommandlet())
 	{
 		GConfig->SetBool(TEXT("/Script/LiveCoding.LiveCodingSettings"),TEXT("bEnabled"),false,GEditorPerProjectIni);
@@ -121,48 +147,71 @@ void FResScannerEditorModule::StartupModule()
 	{
 		bIsCookCommandlet = CommandletName.Equals(TEXT("cook"),ESearchCase::IgnoreCase);
 	}
-	
+	if(::IsRunningCommandlet())
+		UE_LOG(LogResScannerEditor,Display,TEXT("Is CookCommandlet :%s"),bIsCookCommandlet ? TEXT("TRUE") : TEXT("FALSE"));
+
 	if(::IsRunningCommandlet() && bIsCookCommandlet && EditorSetting->bEnableCookingCheck)
 	{
 		ScannerPackageTracker = MakeShareable(new FScannerPackageTracker);
 		FCoreDelegates::OnEnginePreExit.AddRaw(this,&FResScannerEditorModule::OnEnginePreExit);
 	}
+
+	UE_LOG(LogResScannerEditor,Display,TEXT("CreateScannerPackageTracker :%s"),ScannerPackageTracker.IsValid() ? TEXT("TRUE") : TEXT("FALSE"));
+	
+	ScannerDataTableListener = MakeShareable(new FScannerDataTableListener);
 }
 
 void FResScannerEditorModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
-
+	UE_LOG(LogResScannerEditor,Display,TEXT("ResScannerEditorModule ShutdownModule"));
 }
 
 void FResScannerEditorModule::OnEnginePreExit()
 {
+	UE_LOG(LogResScannerEditor,Display,TEXT("OnEnginePreExit"));
+	
 	const UResScannerEditorSettings* EditorSetting = GetDefault<UResScannerEditorSettings>();
+	const FScannerConfig& CookingConfig = GetDefault<UResScannerEditorSettings>()->CookingScannerConfig;
     if(::IsRunningCommandlet() && EditorSetting->bEnableCookingCheck && ScannerPackageTracker.IsValid())
     {
     	UResScannerProxy* CookingScannerProxy = NewObject<UResScannerProxy>();
-    	CookingScannerProxy->SetScannerConfig(GetDefault<UResScannerEditorSettings>()->CookingScannerConfig);
+    	CookingScannerProxy->SetScannerConfig(CookingConfig);
     	CookingScannerProxy->Init();
-    		
+    	CookingScannerProxy->AddToRoot();
+    	
     	TArray<FAssetData> LoadedPackageDatas;
-    
-    	for(const auto& PackageName:ScannerPackageTracker->GetLoadedPackageNames())
-    	{
+    	
+    	TArray<FName> LoadedPackageNames = ScannerPackageTracker->GetLoadedPackageNames().Array();
+    	ParallelFor(LoadedPackageNames.Num(),[&](int32 index)
+		{
+    		FName PackageName = LoadedPackageNames[index];
     		FSoftObjectPath ObjectPath(LongPackageNameToPackagePath(PackageName.ToString()));
-    		FAssetData AssetData;
-    		if(UAssetManager::Get().GetAssetDataForPath(ObjectPath,AssetData))
-    		{
-    			LoadedPackageDatas.AddUnique(AssetData);
-    		}
-    	}	
-    	const auto& ScanResult = ScannerProxy->ScanAssets(LoadedPackageDatas);
+			FAssetData AssetData;
+			if(UAssetManager::Get().GetAssetDataForPath(ObjectPath,AssetData))
+			{
+				LoadedPackageDatas.AddUnique(AssetData);
+			}
+		},true,false);
+		
+    	UE_LOG(LogResScannerEditor,Display,TEXT("Tracking Load Asset Num: %d"),LoadedPackageDatas.Num());
+
+    	FString CookingConfigJsonStr;
+    	TemplateHelper::TSerializeStructAsJsonString(CookingConfig,CookingConfigJsonStr);
+    	UE_LOG(LogResScannerEditor,Display,TEXT("\n%s\n"),*CookingConfigJsonStr);
+    	
+    	const auto& ScanResult = CookingScannerProxy->ScanAssets(LoadedPackageDatas);
     
     	if(ScanResult.HasValidResult())
     	{
     		FString ScanResultStr = ScanResult.SerializeResult(true);
     		TSharedPtr<FScannerConfig> Config = CookingScannerProxy->GetScannerConfig();
-    		FString ConfigName = FString::Printf(TEXT("%s.txt"),*Config->ConfigName);
+    		
+    		FString PlatformName;
+    		FParse::Value(FCommandLine::Get(), TEXT("-TargetPlatform="), PlatformName);
+    		FString ConfigName = FString::Printf(TEXT("%s_%s.txt"),*Config->ConfigName,*PlatformName);
+    		
     		FString SaveTo = UFlibAssetParseHelper::ReplaceMarkPath(FPaths::Combine(Config->SavePath.Path,ConfigName));
     		if(FFileHelper::SaveStringToFile(ScanResultStr,*SaveTo,FFileHelper::EEncodingOptions::ForceUTF8))
     		{
@@ -286,6 +335,15 @@ void FResScannerEditorModule::PackageSaved(const FString& PacStr,UObject* Packag
 	}
 }
 
+
+void RegistryDataTable()
+{
+
+	TSharedPtr<FScannerDataTableListener> Listener = MakeShareable(new FScannerDataTableListener);
+	
+	// FDataTableEditorUtils::FDataTableEditorManager::Get().AddListener(Listener);
+	
+}
 #undef LOCTEXT_NAMESPACE
 	
 IMPLEMENT_MODULE(FResScannerEditorModule, ResScannerEditor)

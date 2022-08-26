@@ -357,8 +357,9 @@ UENUM(BlueprintType)
 enum class EScanRulesType:uint8
 {
 	All UMETA(DisplayName="所有规则"),
-	RuleIDs UMETA(DisplayName="特定ID"),
-	Prioritys UMETA(DisplayName="特定优先级")
+	Prioritys UMETA(DisplayName="特定优先级"),
+	WhiteList UMETA(DisplayName="白名单"),
+	BlockList UMETA(DisplayName="黑名单"),
 };
 
 USTRUCT(BlueprintType)
@@ -393,9 +394,9 @@ public:
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="扫描规则类型",Category="Rules")
 	EScanRulesType ScanRulesType = EScanRulesType::All;
 	
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则白名单",Category="Rules",meta=(EditCondition="ScanRulesType==EScanRulesType::RuleIDs"))
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则白名单",Category="Rules",meta=(EditCondition="ScanRulesType==EScanRulesType::WhiteList"))
 	TArray<int32> RuleWhileListIDs;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则黑名单",Category="Rules",meta=(EditCondition="ScanRulesType==EScanRulesType::RuleIDs"))
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="规则黑名单",Category="Rules",meta=(EditCondition="ScanRulesType==EScanRulesType::BlockList"))
 	TArray<int32> RuleBlockListIDs;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="优先级列表",Category="Rules",meta=(EditCondition="ScanRulesType==EScanRulesType::Prioritys"))
 	TArray<ERulePriority> Prioritys;
@@ -421,7 +422,7 @@ public:
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="关闭Shader编译",Category="Advanced")
 	bool bNoShaderCompile = true;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="输出详细日志",Category="Advanced")
-	bool bVerboseLog = true;
+	bool bVerboseLog = false;
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Advanced")
 	FString AdditionalExecCommand;

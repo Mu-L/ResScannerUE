@@ -764,12 +764,13 @@ namespace GitSourceControlUtils
 			Parameters.Add(TEXT("--date=raw"));
 			Parameters.Add(TEXT("--name-status")); // relative filename at this revision, preceded by a status character
 			Parameters.Add(TEXT("--pretty=medium")); // make sure format matches expected in ParseLogResults
+			Parameters.Add(TEXT("--max-count=1"));
 			if (bMergeConflict)
 			{
 				// In case of a merge conflict, we also need to get the tip of the "remote branch" (MERGE_HEAD) before the log of the "current branch" (HEAD)
 				// @todo does not work for a cherry-pick! Test for a rebase.
 				Parameters.Add(TEXT("MERGE_HEAD"));
-				Parameters.Add(TEXT("--max-count 1"));
+				// Parameters.Add(TEXT("--max-count 1"));
 			}
 			TArray<FString> Files;
 			Files.Add(*InFile);
