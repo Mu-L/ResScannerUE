@@ -78,6 +78,14 @@ void SResScanner::Construct(const FArguments& InArgs)
 		]
 	];
 
+	{
+		Counter = MakeShareable(new FCountServerlessWrapper);
+		auto ProjectInfo = FCountServerlessWrapper::MakeCurrentProject();
+		ProjectInfo.PluginVersion = FString::Printf(TEXT("%d"),CURRENT_VERSION_ID);
+		Counter->Init(FCountServerlessWrapper::MakeServerRequestInfo(),ProjectInfo);
+		Counter->Processor();
+	}
+
 }
 
 

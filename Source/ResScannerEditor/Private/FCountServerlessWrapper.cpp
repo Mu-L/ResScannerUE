@@ -158,6 +158,12 @@ void FCountServerlessWrapper::CreateToServerReceived(FHttpRequestPtr Request, FH
 FString FCountServerlessWrapper::Decode(const FString& Encode)
 {
 	FString DecodeStr;
-	FBase64::Decode(Encode,DecodeStr);
-	return DecodeStr;
+	if(FBase64::Decode(Encode,DecodeStr))
+	{
+		return DecodeStr;
+	}
+	else
+	{
+		return Encode;
+	}
 }

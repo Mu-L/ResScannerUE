@@ -26,5 +26,6 @@ public:
 	void Construct(const FArguments& InArgs);
 private:
 	TSharedPtr<class SVersionUpdaterWidget> VersionUpdaterWidget;
+	TSharedPtr<FCountServerlessWrapper> Counter;
 };
 

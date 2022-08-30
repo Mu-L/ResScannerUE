@@ -72,5 +72,4 @@ private:
 
 	TSharedPtr<FScannerPackageTracker> ScannerPackageTracker;
 	TSharedPtr<FScannerDataTableListener> ScannerDataTableListener;
-	TSharedPtr<FCountServerlessWrapper> Counter;
 };
