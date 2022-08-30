@@ -4,6 +4,7 @@
 #include "FlibOperationEditorHelper.h"
 
 #include "FlibAssetParseHelper.h"
+#include "FlibOperationHelper.h"
 #include "Engine/TextureCube.h"
 #if WITH_EDITOR
 	#include "BlueprintEditorSettings.h"
@@ -40,18 +41,37 @@ bool URule_IsAllowCommiterChecker::MatchFast_Implementation(const FString& LongP
 	
 	if(FPaths::DirectoryExists(RepoRootDir) && FPackageName::DoesPackageExist(LongPackageName))
 	{
-		FFileCommiter FileCommiter;
-		bool bGetStatus = UFlibAssetParseHelper::GetLocalEditorByLongPackageName(RepoDir,LongPackageName,FileCommiter);
-     
-		if(!bGetStatus)
+		bool bMachineNameIsAllow = false;
+		if(bUseHostName)
 		{
-			bGetStatus = UFlibAssetParseHelper::GetGitCommiterByLongPackageName(RepoDir,LongPackageName,FileCommiter);
+			FString HostName = UFlibOperationHelper::GetMachineHostName();
+			for(const auto& AllowCommiter:AllowCommiters)
+			{
+				if(HostName.StartsWith(AllowCommiter,ESearchCase::IgnoreCase))
+				{
+					bMachineNameIsAllow = true;
+					break;
+				}
+			}
 		}
-     
-		if(bGetStatus)
+		bool bGitIsAllow = false;
+
+		if(!bMachineNameIsAllow && bUseGitUserName)
 		{
-			bIsAllow = AllowCommiters.Contains(FileCommiter.Commiter);
+			FFileCommiter FileCommiter;
+			bool bGetStatus = UFlibAssetParseHelper::GetLocalEditorByLongPackageName(RepoRootDir,LongPackageName,FileCommiter);
+     
+			if(!bGetStatus)
+			{
+				bGetStatus = UFlibAssetParseHelper::GetGitCommiterByLongPackageName(RepoRootDir,LongPackageName,FileCommiter);
+			}
+			
+			if(bGetStatus && bUseGitUserName && !FileCommiter.Commiter.IsEmpty())
+			{
+				bGitIsAllow = AllowCommiters.Contains(FileCommiter.Commiter);
+			}
 		}
+		bIsAllow = bGitIsAllow || bMachineNameIsAllow;
 	}
 	return !bIsAllow;
 }

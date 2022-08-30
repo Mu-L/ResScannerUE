@@ -10,14 +10,6 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogFlibAssetParseHelper, Log, All);
 
-
-#define SC_ENGINEDIR_MARK TEXT("[ENGINE_DIR]")
-#define SC_ENGINE_CONTENT_DIR_MARK TEXT("[ENGINE_CONTENT_DIR]")
-#define SC_PROJECTDIR_MARK TEXT("[PROJECT_DIR]")
-#define SC_PROJECT_CONTENT_DIR_MARK TEXT("[PROJECT_CONTENT_DIR]")
-#define SC_PROJECT_SAVED_DIR_MARK TEXT("[PROJECT_SAVED_DIR]")
-#define SC_PROJECT_CONFIG_DIR_MARK TEXT("[PROJECT_CONFIG_DIR]")
-
 /**
  * 
  */
@@ -104,4 +96,10 @@ struct CustomMatchOperator:public IMatchOperator
 {
 	virtual bool Match(const FAssetData& AssetData,const FScannerMatchRule& Rule);
 	virtual FString GetOperatorName(){ return TEXT("ExternalMatchRule");};
+};
+
+struct CommiterMatchOperator:public IMatchOperator
+{
+	virtual bool Match(const FAssetData& AssetData,const FScannerMatchRule& Rule);
+	virtual FString GetOperatorName(){ return TEXT("CommiterMatchRule");};
 };

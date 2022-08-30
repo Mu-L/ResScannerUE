@@ -32,6 +32,10 @@ protected:
 	FString RepoDir;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	TArray<FString> AllowCommiters;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	bool bUseGitUserName = true;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	bool bUseHostName = false;
 };
 
 /**

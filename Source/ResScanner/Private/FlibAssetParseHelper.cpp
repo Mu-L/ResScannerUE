@@ -9,6 +9,7 @@
 #include "Kismet/KismetStringLibrary.h"
 #include "AssetRegistryModule.h"
 #include "ARFilter.h"
+#include "FlibOperationHelper.h"
 #include "FlibSourceControlHelper.h"
 #include "Engine/AssetManager.h"
 #include "Framework/Notifications/NotificationManager.h"
@@ -689,4 +690,52 @@ bool CustomMatchOperator::Match(const FAssetData& AssetData,const FScannerMatchR
 		}
 	}
 	return bIsMatched;
+}
+
+bool CommiterMatchOperator::Match(const FAssetData& AssetData, const FScannerMatchRule& Rule)
+{
+	bool bIsAllow = true;
+	if(!Rule.CommiterMatchRules.bCheckCommiter)
+	{
+		return true;
+	}
+	
+	FString LongPackageName = AssetData.PackageName.ToString();
+
+	FString RepoRootDir = UFlibAssetParseHelper::ReplaceMarkPath(Rule.CommiterMatchRules.RepoDir);
+	if(FPaths::DirectoryExists(RepoRootDir) && FPackageName::DoesPackageExist(LongPackageName))
+	{
+		bool bMachineNameIsAllow = false;
+		if(Rule.CommiterMatchRules.bUseHostName)
+		{
+			FString HostName = UFlibOperationHelper::GetMachineHostName();
+			for(const auto& AllowCommiter:Rule.CommiterMatchRules.AllowCommiters)
+			{
+				if(HostName.StartsWith(AllowCommiter,ESearchCase::IgnoreCase))
+				{
+					bMachineNameIsAllow = true;
+					break;
+				}
+			}
+		}
+		bool bGitIsAllow = false;
+
+		if(!bMachineNameIsAllow && Rule.CommiterMatchRules.bUseGitUserName)
+		{
+			FFileCommiter FileCommiter;
+			bool bGetStatus = UFlibAssetParseHelper::GetLocalEditorByLongPackageName(RepoRootDir,LongPackageName,FileCommiter);
+     
+			if(!bGetStatus)
+			{
+				bGetStatus = UFlibAssetParseHelper::GetGitCommiterByLongPackageName(RepoRootDir,LongPackageName,FileCommiter);
+			}
+			
+			if(bGetStatus && Rule.CommiterMatchRules.bUseGitUserName && !FileCommiter.Commiter.IsEmpty())
+			{
+				bGitIsAllow = Rule.CommiterMatchRules.AllowCommiters.Contains(FileCommiter.Commiter);
+			}
+		}
+		bIsAllow = bGitIsAllow || bMachineNameIsAllow;
+	}
+	return !bIsAllow;
 }

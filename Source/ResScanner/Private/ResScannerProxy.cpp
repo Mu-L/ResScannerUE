@@ -17,6 +17,7 @@ void UResScannerProxy::Init()
 	MatchOperators.Add(TEXT("PathMatchRule"),MakeShareable(new PathMatchOperator));
 	MatchOperators.Add(TEXT("PropertyMatchRule"),MakeShareable(new PropertyMatchOperator));
 	MatchOperators.Add(TEXT("CustomMatchRule"),MakeShareable(new CustomMatchOperator));
+	MatchOperators.Add(TEXT("CommiterMatchRule"),MakeShareable(new CommiterMatchOperator));
 }
 
 void UResScannerProxy::Shutdown()

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "FCountServerlessWrapper.h"
 #include "Commandlets/Commandlet.h"
 #include "ResScannerCommandlet.generated.h"
 
@@ -11,6 +12,7 @@ class UResScannerCommandlet :public UCommandlet
 	GENERATED_BODY()
 
 public:
-
 	virtual int32 Main(const FString& Params)override;
+protected:
+	TSharedPtr<FCountServerlessWrapper> Counter;
 };

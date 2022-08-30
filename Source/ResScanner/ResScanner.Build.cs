@@ -43,6 +43,7 @@ public class ResScanner : ModuleRules
 				"Slate",
 				"SlateCore",
 				"AssetRegistry", 
+				"Sockets",
 				"GitSourceControlEx"
 				// ... add private dependencies that you statically link with here ...	
 			}

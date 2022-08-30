@@ -13,9 +13,13 @@ UCLASS()
 class RESSCANNER_API UFlibOperationHelper : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
-
+public:
 	UFUNCTION(BlueprintCallable,BlueprintPure)
 	static TSubclassOf<class AGameModeBase> GetMapGameModeClassByAsset(UObject* World);
 	UFUNCTION(BlueprintCallable,BlueprintPure)
 	static TSubclassOf<class AGameModeBase> GetMapGameModeClass(UWorld* World);
+	UFUNCTION(BlueprintCallable,BlueprintPure)
+	static FString GetMachineHostName();
+	UFUNCTION(BlueprintCallable,BlueprintPure)
+	static TArray<FString> GetMachineHostIPs();
 };

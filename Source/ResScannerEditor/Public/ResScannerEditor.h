@@ -8,6 +8,7 @@
 #include "ThreadUtils/FProcWorkerThread.hpp"
 #include "FScannerPackageTracker.h"
 #include "DataTableEditorUtils.h"
+#include "FCountServerlessWrapper.h"
 #include "FMatchRuleTypes.h"
 #include "Kismet2/ListenerManager.h"
 #include "Kismet2/StructureEditorUtils.h"
@@ -71,4 +72,5 @@ private:
 
 	TSharedPtr<FScannerPackageTracker> ScannerPackageTracker;
 	TSharedPtr<FScannerDataTableListener> ScannerDataTableListener;
+	TSharedPtr<FCountServerlessWrapper> Counter;
 };

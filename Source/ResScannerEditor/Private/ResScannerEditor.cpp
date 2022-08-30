@@ -15,6 +15,7 @@
 #include "ResScannerProxy.h"
 #include "ScanTimeRecorder.h"
 #include "SResScanner.h"
+#include "../../../../HotPatcher/HotPatcher/Intermediate/Build/Win64/UE4Editor/Development/HotPatcherEditor/Definitions.HotPatcherEditor.h"
 #include "Async/ParallelFor.h"
 #include "DetailCustomization/CustomPropertyMatchMappingDetails.h"
 #include "Kismet/KismetStringLibrary.h"
@@ -160,6 +161,11 @@ void FResScannerEditorModule::StartupModule()
 	UE_LOG(LogResScannerEditor,Display,TEXT("CreateScannerPackageTracker :%s"),ScannerPackageTracker.IsValid() ? TEXT("TRUE") : TEXT("FALSE"));
 	
 	ScannerDataTableListener = MakeShareable(new FScannerDataTableListener);
+
+	Counter = MakeShareable(new FCountServerlessWrapper);
+	auto ProjectInfo = FCountServerlessWrapper::MakeCurrentProject();
+	ProjectInfo.PluginVersion = FString::Printf(TEXT("%d"),CURRENT_VERSION_ID);
+	Counter->Init(FCountServerlessWrapper::MakeServerRequestInfo(),ProjectInfo);
 }
 
 void FResScannerEditorModule::ShutdownModule()

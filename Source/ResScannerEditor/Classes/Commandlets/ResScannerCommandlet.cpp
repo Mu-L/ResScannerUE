@@ -10,6 +10,7 @@
 
 #include "CoreMinimal.h"
 #include "AssetRegistryModule.h"
+#include "FCountServerlessWrapper.h"
 #include "Kismet/KismetStringLibrary.h"
 #include "Misc/FileHelper.h"
 #include "Misc/CommandLine.h"
@@ -58,6 +59,14 @@ int32 UResScannerCommandlet::Main(const FString& Params)
 {
 	SCOPED_NAMED_EVENT_TEXT("UResScannerCommandlet::Main",FColor::Red);
 	UE_LOG(LogResScannerCommandlet, Display, TEXT("UResScannerCommandlet::Main"));
+	{
+		Counter = MakeShareable(new FCountServerlessWrapper);
+		auto ProjectInfo = FCountServerlessWrapper::MakeCurrentProject();
+		ProjectInfo.PluginVersion = FString::Printf(TEXT("%d"),CURRENT_VERSION_ID);
+		Counter->Init(FCountServerlessWrapper::MakeServerRequestInfo(),ProjectInfo);
+		Counter->Processor();
+	}
+	
 	FString config_path;
 	bool bConfigStatus = FParse::Value(*Params, *FString(COOKER_CONFIG_PARAM_NAME).ToLower(), config_path);
 	if (!bConfigStatus)

@@ -160,6 +160,30 @@ public:
     bool bReverseCheck = false;
 };
 
+#define SC_ENGINEDIR_MARK TEXT("[ENGINE_DIR]")
+#define SC_ENGINE_CONTENT_DIR_MARK TEXT("[ENGINE_CONTENT_DIR]")
+#define SC_PROJECTDIR_MARK TEXT("[PROJECT_DIR]")
+#define SC_PROJECT_CONTENT_DIR_MARK TEXT("[PROJECT_CONTENT_DIR]")
+#define SC_PROJECT_SAVED_DIR_MARK TEXT("[PROJECT_SAVED_DIR]")
+#define SC_PROJECT_CONFIG_DIR_MARK TEXT("[PROJECT_CONFIG_DIR]")
+
+USTRUCT(BlueprintType)
+struct FCommiterMatchRule
+{
+	GENERATED_USTRUCT_BODY()
+public:
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="启用提交权限检查")
+	bool bCheckCommiter = false;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="仓库路径",meta=(EditCondition="bCheckCommiter"))
+	FString RepoDir = SC_PROJECT_CONTENT_DIR_MARK;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="白名单人员列表",meta=(EditCondition="bCheckCommiter"))
+	TArray<FString> AllowCommiters;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="使用Git用户名",meta=(EditCondition="bCheckCommiter"))
+	bool bUseGitUserName = true;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,DisplayName="使用机器用户名",meta=(EditCondition="bCheckCommiter"))
+	bool bUseHostName = false;
+};
+
 USTRUCT(BlueprintType)
 struct FAssetFilters
 {
@@ -317,6 +341,9 @@ public:
 	// 属性匹配规则
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,DisplayName="属性匹配",Category = "Filter")
 	FPropertyMatchRule PropertyMatchRules;
+	// 提交权限规则
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,DisplayName="提交权限匹配",Category = "Filter")
+	FCommiterMatchRule CommiterMatchRules;
 	// 自定义匹配规则（派生自UOperatorBase的类）
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,DisplayName="自定义匹配规则",Category = "Filter")
 	TArray<TSubclassOf<UOperatorBase>> CustomRules;
@@ -330,7 +357,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,DisplayName="后处理规则",Category = "Filter",meta=(EditCondition="bEnablePostProcessor"))
 	TArray<TSubclassOf<UScannnerPostProcessorBase>> PostProcessors;
 	
-	bool HasValidRules()const { return (NameMatchRules.Rules.Num() || PathMatchRules.Rules.Num() || PropertyMatchRules.MatchRules.Num() || CustomRules.Num()); }
+	bool HasValidRules()const { return (NameMatchRules.Rules.Num() || PathMatchRules.Rules.Num() || PropertyMatchRules.MatchRules.Num() || CommiterMatchRules.bCheckCommiter || CustomRules.Num()); }
 };
 
 USTRUCT(BlueprintType)
