@@ -72,12 +72,6 @@ void FScannerDataTableListener::PostChange(const UDataTable* Changed, FDataTable
 	}
 }
 
-void UResScannerRegister::OpenResScannerEditor()
-{
-	FResScannerEditorModule& ResScannerModule = FModuleManager::LoadModuleChecked<FResScannerEditorModule>(ResScannerTabName);
-	ResScannerModule.PluginButtonClicked();
-}
-
 FResScannerEditorModule& FResScannerEditorModule::Get()
 {
 	FResScannerEditorModule& Module = FModuleManager::GetModuleChecked<FResScannerEditorModule>("ResScannerEditor");
@@ -118,11 +112,13 @@ void FResScannerEditorModule::StartupModule()
 
 		LevelEditorModule.GetMenuExtensibilityManager()->AddExtender(MenuExtender);
 
+#ifndef DISABLE_PLUGIN_TOOLBAR_MENU
 		// settings
-		// TSharedPtr<FExtender> ToolbarExtender = MakeShareable(new FExtender);
-		// ToolbarExtender->AddToolBarExtension("Settings", EExtensionHook::After, PluginCommands, FToolBarExtensionDelegate::CreateRaw(this, &FResScannerEditorModule::AddToolbarExtension));
-		// 
-		// LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(ToolbarExtender);
+		TSharedPtr<FExtender> ToolbarExtender = MakeShareable(new FExtender);
+		ToolbarExtender->AddToolBarExtension("Settings", EExtensionHook::After, PluginCommands, FToolBarExtensionDelegate::CreateRaw(this, &FResScannerEditorModule::AddToolbarExtension));
+		
+		LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(ToolbarExtender);
+#endif
 	}
 
 

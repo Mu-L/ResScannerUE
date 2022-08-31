@@ -12,12 +12,8 @@
 #include "FMatchRuleTypes.h"
 #include "Kismet2/ListenerManager.h"
 #include "Kismet2/StructureEditorUtils.h"
-#include "ResScannerEditor.generated.h"
-
 
 DECLARE_LOG_CATEGORY_EXTERN(LogResScannerEditor,All,All);
-
-
 
 class FScannerDataTableListener:
 	public FNotifyHook,
@@ -35,14 +31,6 @@ class FScannerDataTableListener:
 	// INotifyOnDataTableChanged
 	virtual void PreChange(const UDataTable* Changed, FDataTableEditorUtils::EDataTableChangeInfo Info) override{}
 	virtual void PostChange(const UDataTable* Changed, FDataTableEditorUtils::EDataTableChangeInfo Info) override;
-};
-
-UCLASS()
-class RESSCANNEREDITOR_API UResScannerRegister : public UObject
-{
-	GENERATED_BODY()
-	UFUNCTION(meta=(QEToolBar="FFUtils/SystemUtils.ResScanner", QEIcon="ResScanner/Resources/Icon128.png"))
-	static void OpenResScannerEditor();
 };
 
 class FResScannerEditorModule : public IModuleInterface
