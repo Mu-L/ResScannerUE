@@ -1,6 +1,7 @@
 #include "SResScanner.h"
 #include "SVersionUpdater/SVersionUpdaterWidget.h"
 #include "SResScannerConfigPage.h"
+#include "FCountServerlessWrapper.h"
 // engine header
 #include "Styling/SlateTypes.h"
 #include "Widgets/Layout/SBorder.h"
@@ -45,11 +46,11 @@ void SResScanner::Construct(const FArguments& InArgs)
 				.AutoHeight()
 				[
 					SAssignNew(VersionUpdaterWidget,SVersionUpdaterWidget)
-					.ToolName(FText::FromString(ANSI_TO_TCHAR(TOOL_NAME)))
+					.ToolName(FText::FromString(ANSI_TO_TCHAR(SCANNER_TOOL_NAME)))
 					.DeveloperName(FText::FromString(TEXT("lipengzha")))
 					.DeveloperWebsite(FText::FromString(TEXT("https://imzlp.com")))
 					.UpdateWebsite(FText::FromString(TEXT("https://imzlp.com/posts/3635/")))
-					.CurrentVersion(CURRENT_VERSION_ID)
+					.CurrentVersion(SCANNER_CURRENT_VERSION_ID)
 				]
 				+SVerticalBox::Slot()
 				.Padding(0,10,0,0)
@@ -81,7 +82,7 @@ void SResScanner::Construct(const FArguments& InArgs)
 	{
 		Counter = MakeShareable(new FCountServerlessWrapper);
 		auto ProjectInfo = FCountServerlessWrapper::MakeCurrentProject();
-		ProjectInfo.PluginVersion = FString::Printf(TEXT("%d"),CURRENT_VERSION_ID);
+		ProjectInfo.PluginVersion = FString::Printf(TEXT("%d"),SCANNER_CURRENT_VERSION_ID);
 		Counter->Init(FCountServerlessWrapper::MakeServerRequestInfo(),ProjectInfo);
 		Counter->Processor();
 	}

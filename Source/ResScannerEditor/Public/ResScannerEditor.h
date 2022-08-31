@@ -3,14 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ThreadUtils/ScannerNotificationProxy.h"
-#include "Modules/ModuleManager.h"
-#include "ThreadUtils/FProcWorkerThread.hpp"
-#include "FScannerPackageTracker.h"
 #include "DataTableEditorUtils.h"
-#include "FCountServerlessWrapper.h"
-#include "FMatchRuleTypes.h"
-#include "Kismet2/ListenerManager.h"
 #include "Kismet2/StructureEditorUtils.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogResScannerEditor,All,All);
@@ -33,7 +26,7 @@ class FScannerDataTableListener:
 	virtual void PostChange(const UDataTable* Changed, FDataTableEditorUtils::EDataTableChangeInfo Info) override;
 };
 
-class FResScannerEditorModule : public IModuleInterface
+class RESSCANNEREDITOR_API FResScannerEditorModule : public IModuleInterface
 {
 public:
 	static FResScannerEditorModule& Get();
@@ -46,18 +39,17 @@ public:
 	void AddMenuExtension(FMenuBuilder& Builder);
 	void AddToolbarExtension(FToolBarBuilder& Builder);
 	void RunProcMission(const FString& Bin, const FString& Command, const FString& MissionName);
-	void OnAssetUpdate(const FAssetData& NewAsset);
 	void PackageSaved(const FString& PacStr,UObject* PackageSaved);
 	void CreateExtensionSettings();
 	void OnEnginePreExit();
 	
 private:
-	mutable TSharedPtr<FProcWorkerThread> mProcWorkingThread;
-	UScannerNotificationProxy* MissionNotifyProay = NULL;
+	mutable TSharedPtr<class FProcWorkerThread> mProcWorkingThread;
+	class UScannerNotificationProxy* MissionNotifyProay = NULL;
 	class UResScannerProxy* ScannerProxy = NULL;
 	TSharedPtr<class FUICommandList> PluginCommands;
 	TSharedPtr<SDockTab> DockTab;
 
-	TSharedPtr<FScannerPackageTracker> ScannerPackageTracker;
+	TSharedPtr<struct FScannerPackageTracker> ScannerPackageTracker;
 	TSharedPtr<FScannerDataTableListener> ScannerDataTableListener;
 };

@@ -4,6 +4,13 @@
 #include "Widgets/Docking/SDockTab.h"
 #include "LevelEditor.h"
 #include "ResScannerCommands.h"
+#include "ThreadUtils/ScannerNotificationProxy.h"
+#include "Modules/ModuleManager.h"
+#include "ThreadUtils/FProcWorkerThread.hpp"
+#include "FScannerPackageTracker.h"
+#include "DataTableEditorUtils.h"
+#include "FMatchRuleTypes.h"
+
 #if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION>=26
 	#define InvokeTab TryInvokeTab
 #endif
@@ -19,7 +26,6 @@
 #include "DetailCustomization/CustomPropertyMatchMappingDetails.h"
 #include "Kismet/KismetStringLibrary.h"
 #include "Kismet/KismetTextLibrary.h"
-#include "SVersionUpdater/VersionUpdaterStyle.h"
 
 static const FName ResScannerTabName("ResScanner");
 

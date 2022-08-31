@@ -6,9 +6,6 @@
 #include "Interfaces/IHttpRequest.h"
 #include "Widgets/SCompoundWidget.h"
 
-// #define CURRENT_VERSION_ID 68
-// #define REMOTE_VERSION_FILE TEXT("https://imzlp.com/opensource/version.json")
-
 class SVersionUpdaterWidget : public SCompoundWidget
 {
 
