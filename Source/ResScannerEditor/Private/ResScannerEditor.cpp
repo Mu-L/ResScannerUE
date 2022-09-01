@@ -10,7 +10,7 @@
 #include "FScannerPackageTracker.h"
 #include "DataTableEditorUtils.h"
 #include "FMatchRuleTypes.h"
-
+#include "ScanTimeRecorder.h"
 #if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION>=26
 	#define InvokeTab TryInvokeTab
 #endif
@@ -24,6 +24,7 @@
 #include "SResScanner.h"
 #include "Async/ParallelFor.h"
 #include "DetailCustomization/CustomPropertyMatchMappingDetails.h"
+#include "Engine/AssetManager.h"
 #include "Kismet/KismetStringLibrary.h"
 #include "Kismet/KismetTextLibrary.h"
 
